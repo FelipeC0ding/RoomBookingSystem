@@ -1,0 +1,25 @@
+import { useState } from 'react'
+import reactLogo from './assets/react.svg'
+import viteLogo from '/vite.svg'
+import './App.css'
+import FilterBar from './Filter.tsx';
+
+function App() {
+  const [count, setCount] = useState(0)
+
+  return (
+      <div>
+             <FilterBar/>
+      </div>
+  )
+}
+export default App
+
+function Menu(){
+    return(
+        <div>
+            <button>+ New Booking </button>
+            <h1> hello </h1>
+        </div>
+        );
+    }
