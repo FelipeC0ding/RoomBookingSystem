@@ -14,12 +14,3 @@ function App() {
   )
 }
 export default App
-
-function Menu(){
-    return(
-        <div>
-            <button>+ New Booking </button>
-            <h1> hello </h1>
-        </div>
-        );
-    }
