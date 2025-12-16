@@ -3,12 +3,13 @@ import { createRoot } from 'react-dom/client'
 import 'bootstrap/dist/css/bootstrap.css'
 import App from './App.jsx'
 import Login from './Login.jsx'
+import SwitchLogin from './SwitchLogin'
 
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
         <div>
-            <Login/>
+            <SwitchLogin/>
         </div>
   </StrictMode>,
 )
