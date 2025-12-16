@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Calendar, Settings } from 'lucide-react';
 import { Monitor } from 'lucide-react';
 import AdminPage from './Admin.jsx'
-
+import SignUp from './SignUp.jsx'
 function LabeledInput({ label, children }){
     return(
             <div className="flex flex-col flex-grow min-w-[150px] mb-4 md:mb-0">

@@ -1,18 +1,9 @@
-import React from 'react';
+import React, {useState} from 'react'
 import "tailwindcss";
+import Login from './Login.jsx'
 const INPUT_CLASSES = "p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out";
-function SignUp()
+function SignUp({onSwitch})
 {
-
-    const signUpPage[page, setPage] = useState("Login")
-
-    const SetPage = () =>{
-        switch(page){
-            case 'Login':
-            return <SignUp/>;
-            case 'SignUp':
-                return <Login/>;
-        }
     return(
         <div className="flex justify-center items-center min-h-screen bg-gray-100 p-4">
 
@@ -20,7 +11,7 @@ function SignUp()
                 <div className="w-full max-w-xs p-6 bg-white rounded-xl shadow-2xl border border-gray-200">
 
                     <h2 className="text-3xl font-bold mb-8 text-center text-gray-800 flex items-center justify-center gap-2">
-                        Access Booking
+                        Sign Up
                     </h2>
 
                     <form>
@@ -69,6 +60,16 @@ function SignUp()
                             <a href="#" className="text-sm text-blue-600 hover:text-blue-800 transition duration-150">
                                 Forgot Password?
                             </a>
+                        </div>
+                        <div className="mt-4 text-center">
+                                                    <a href="#" className="text-sm text-blue-600 hover:text-blue-800 transition duration-150"
+                                                    onClick={(e) =>{
+                                                        e.preventDefault();
+                                                        onSwitch();
+                                                        }}
+                                                    >
+                                                        Login
+                                                    </a>
                         </div>
                     </form>
                 </div>
