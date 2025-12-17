@@ -1,0 +1,158 @@
+/* =====================================
+   GLOBAL STYLES & CONTAINER
+===================================== */
+
+body {
+    /* Optional: Ensure the background is filled */
+    margin: 0;
+    padding: 0;
+    background: #f0f2f5; /* Light background color */
+    font-family: 'Arial', sans-serif;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    width: 380px; /* Fixed width for the form container */
+    margin: 80px auto; /* Center the form vertically and horizontally */
+    background: white;
+    padding-bottom: 30px; /* Padding at the bottom for spacing */
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+}
+
+/* =====================================
+   HEADER & TITLE
+===================================== */
+
+.header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 9px; /* Space between text and underline */
+    width: 100%;
+    margin-top: 30px;
+}
+
+.text {
+    color: #4c00b4; /* Primary color for the header text */
+    font-size: 36px;
+    font-weight: 700;
+}
+
+.underline {
+    width: 61px;
+    height: 6px;
+    background: #4c00b4;
+    border-radius: 9px;
+}
+
+/* =====================================
+   INPUTS SECTION
+===================================== */
+
+.inputs {
+    margin-top: 55px;
+    display: flex;
+    flex-direction: column;
+    gap: 25px; /* Space between input field groups */
+}
+
+.input {
+    display: flex;
+    align-items: center;
+    margin: auto;
+    width: 80%; /* Width of the input field relative to the container */
+    height: 50px;
+    background: #eaeaea; /* Light grey background for the input field */
+    border-radius: 6px;
+    padding: 0 15px;
+}
+
+/* Style for the nested divs that seem to represent icons or labels within the input */
+.input > .text {
+    /* This targets the nested div with className="text" */
+    font-size: 16px;
+    color: #666;
+    margin-right: 15px;
+    /* Reset font size from the header .text */
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* Adjust the nested .email div if it's meant to be an icon area */
+.input > .email {
+    /* Placeholder style if you add an icon background here */
+    width: 20px;
+    height: 20px;
+    background-color: transparent;
+}
+
+
+.input input {
+    /* Makes the input element fill the rest of the available space */
+    height: 100%;
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #797979;
+    font-size: 18px;
+}
+
+/* =====================================
+   FORGOT PASSWORD
+===================================== */
+
+.forgot-password {
+    padding-left: 50px;
+    margin-top: 27px;
+    color: #797979;
+    font-size: 14px;
+}
+
+.forgot-password span {
+    color: #4c00b4;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+/* =====================================
+   SUBMIT BUTTONS
+===================================== */
+
+.submit-container {
+    display: flex;
+    gap: 30px; /* Space between the two buttons */
+    margin: 60px auto 0px auto; /* Center the buttons and add top margin */
+    width: 80%;
+}
+
+.submit {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%; /* Each button takes half the space of the container */
+    height: 59px;
+    color: #fff;
+    background: #4c00b4;
+    border-radius: 50px;
+    font-size: 19px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.submit:hover {
+    background: #6a00ff; /* Slightly lighter on hover */
+}
+
+/* Optional: Style to distinguish the inactive/secondary button */
+.gray {
+    background: #EAEAEA;
+    color: #676767;
+}
+
+.gray:hover {
+    background: #d4d4d4;
+}

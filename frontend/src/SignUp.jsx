@@ -1,6 +1,6 @@
 import React, {useState} from 'react'
 import "tailwindcss";
-import Login from './Login.jsx'
+import LoginPage from './LoginPage.jsx'
 const INPUT_CLASSES = "p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out";
 function SignUp({onSwitch})
 {
