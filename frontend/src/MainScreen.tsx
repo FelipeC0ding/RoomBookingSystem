@@ -3,6 +3,8 @@ import { Plus, Calendar, Settings } from 'lucide-react';
 import { Monitor } from 'lucide-react';
 import AdminPage from './Admin.jsx'
 import SignUp from './SignUp.jsx'
+import LoginPage from './LoginPage.jsx'
+import AuthFlow from './AuthFlow'
 function LabeledInput({ label, children }){
     return(
             <div className="flex flex-col flex-grow min-w-[150px] mb-4 md:mb-0">
@@ -47,7 +49,13 @@ function Menu(props)
               </button>
 
               <button className="btn btn-secondary" onClick={props.handleAdminClick}>
-                              <Settings size={20} className="me-1" /> Admin
+                              <Settings size={20} className="me-1" />
+                              Admin
+              </button>
+
+              <button className="btn btn-secondary" onClick={props.handleLogoutClick}>
+                                            <Settings size={20} className="me-1" />
+                                             Logout
               </button>
             </div>
           </div>
@@ -55,10 +63,11 @@ function Menu(props)
     );
 }
 
-function FilterBar() {
+function MainScreen() {
     const [roomFilter, setRoomFilter] = useState('');
     const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]);
     const [adminPage, setAdminPage] = useState(false);
+    const [logout, setLogout] = useState(false);
 
     const handleAdminClick = () =>{
             setAdminPage(prevValue => !prevValue)
@@ -72,6 +81,16 @@ function FilterBar() {
         alert(`New Booking for ${viewDate} with filter: ${roomFilter}`);
     };
 
+    const handleLogoutClick = () => setLogout(true);
+    function Logout(){
+             setLogout(true)
+
+        };
+
+     if(logout){
+        return <AuthFlow/>
+                }
+
     return (
         adminPage ? (<AdminPage onGoBack={handleGoBack} />) : (
                 <Menu
@@ -81,8 +100,9 @@ function FilterBar() {
                     setViewDate={setViewDate}
                     handleNewBooking={handleNewBooking}
                     handleAdminClick={handleAdminClick}
+                    handleLogoutClick = {handleLogoutClick}
                 />
             )
-    );
+           );
 }
-export default FilterBar;
+export default MainScreen;
