@@ -52,7 +52,6 @@ function AuthFlow() {
         return <MainScreen />; // The dashboard or main content
     }
 
-    // Render the appropriate form based on the state
     return (
         isLoginView ? (
             <LoginPage

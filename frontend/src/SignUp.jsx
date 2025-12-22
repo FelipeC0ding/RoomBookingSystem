@@ -1,79 +1,160 @@
-import React, {useState} from 'react'
-import "tailwindcss";
-import LoginPage from './LoginPage.jsx'
-const INPUT_CLASSES = "p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out";
-function SignUp({onSwitch})
-{
-    return(
-        <div className="flex justify-center items-center min-h-screen bg-gray-100 p-4">
+import React,{useState, useEffect} from 'react';
+import { Mail, Lock, UserPlus, ArrowLeft, School } from 'lucide-react';
+import FetchData from './DAL/FetchData'
 
-                {/* Main Card Container: Narrowed (max-w-xs) and reduced padding (p-6) */}
-                <div className="w-full max-w-xs p-6 bg-white rounded-xl shadow-2xl border border-gray-200">
+const INPUT_CONTAINER = "relative mb-4 w-full";
+const ICON_STYLE = "absolute left-3 top-1/2 -translate-y-1/2 text-gray-400";
+const INPUT_STYLE = `
+  w-full pl-10 pr-4 py-3 bg-white border border-gray-200
+  rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent
+  outline-none transition-all shadow-sm placeholder:text-gray-400
+  text-black caret-black
+`;
 
-                    <h2 className="text-3xl font-bold mb-8 text-center text-gray-800 flex items-center justify-center gap-2">
-                        Sign Up
-                    </h2>
 
-                    <form>
-                        {/* EMAIL FIELD */}
-                        <div className="mb-4 flex flex-col items-center">
-                            <label className="block text-gray-700 font-semibold mb-3" htmlFor="Email">
-                                Email Address
-                            </label>
+function SignUp({ onSwitch }) {
+    const [schools, setSchools] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedSchool, setSelectedSchool] = useState('')
+    useEffect(() =>{
+        async function getALlSchools(){
+            try{
+
+                setLoading(true)
+                const data = await FetchData.GetSchools()
+                setSchools(data)
+                setLoading(false)
+
+            }catch(Error){
+                console.log(Error);
+
+            }
+
+
+        }
+    getALlSchools()
+
+
+    },[])
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+            <div className="w-full max-w-sm bg-white p-8 rounded-2xl shadow-xl border border-gray-200 animate-in fade-in zoom-in duration-300">
+
+                {/* Header Section */}
+                <div className="text-center mb-8">
+                    <div className="inline-flex p-3 bg-blue-50 rounded-full text-blue-600 mb-3">
+                        <UserPlus size={32} />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-800">Create Account</h2>
+                    <p className="text-gray-500 text-sm">Join the booking system today</p>
+                </div>
+
+                <form onSubmit={(e) => e.preventDefault()}>
+                    {/* EMAIL FIELD */}
+                    <div className="space-y-1 mb-4">
+                        <label className="text-sm font-semibold text-gray-600 ml-1" htmlFor="Email">
+                            Email Address
+                        </label>
+                        <div className={INPUT_CONTAINER}>
+                            <Mail size={18} className={ICON_STYLE} />
                             <input
                                 type="email"
                                 id="Email"
-                                name="Email"
                                 placeholder="you@school.edu"
                                 required
-                                className={INPUT_CLASSES + " w-1/2 mx-auto block"}
+                                className={INPUT_STYLE}
                             />
                         </div>
+                    </div>
 
-                        {/* PASSWORD FIELD */}
-                        <div className="mb-6 flex flex-col items-center">
-                            <label className="block text-gray-700 font-semibold mb-3" htmlFor="Password">
-                                Password
-                            </label>
+                    {/* SCHOOL SELECT */}
+                    <div className="space-y-1 mb-4">
+                        <label className="text-sm font-semibold text-gray-600 ml-1" htmlFor="school-select">
+                            Select Your School
+                        </label>
+                        <div className={INPUT_CONTAINER}>
+                            <School size={18} className={ICON_STYLE} />
+
+                            <select
+                                value={selectedSchool}
+                                onChange={(e) => setSelectedSchool(e.target.value)}
+                                className={INPUT_STYLE}
+                                disabled={loading}
+                            >
+                                <option value="" disabled className="text-black">
+                                    {loading ? "Loading schools..." : "Select your school"}
+                                </option>
+
+                                {schools.map((school) => (
+                                    <option
+                                        key={school.id}
+                                        value={school.id}
+                                        className="text-black bg-white"
+                                    >
+                                        {school.Name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* PASSWORD FIELD */}
+                    <div className="space-y-1 mb-4">
+                        <label className="text-sm font-semibold text-gray-600 ml-1" htmlFor="Password">
+                            Create Password
+                        </label>
+                        <div className={INPUT_CONTAINER}>
+                            <Lock size={18} className={ICON_STYLE} />
                             <input
                                 type="password"
                                 id="Password"
-                                name="Password"
-                                placeholder="Enter your password"
+                                placeholder="Min. 8 characters"
                                 required
-                                className={INPUT_CLASSES + " w-1/2 mx-auto block"}
+                                className={INPUT_STYLE}
                             />
                         </div>
+                    </div>
 
-                        {/* LOGIN BUTTON: WIDER AND BOLD (Matching the Filter Button Style) */}
-                        <div className="flex justify-center mt-6">
-                            <button
-                                type="submit"
-                                // Added w-full for width, py-3 for height, shadow-xl for depth
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-150 ease-in-out shadow-xl"
-                            >
-                                Log In
-                            </button>
+                    {/* CONFIRM PASSWORD FIELD */}
+                    <div className="space-y-1 mb-6">
+                        <label className="text-sm font-semibold text-gray-600 ml-1" htmlFor="ConfirmPassword">
+                            Confirm Password
+                        </label>
+                        <div className={INPUT_CONTAINER}>
+                            <Lock size={18} className={ICON_STYLE} />
+                            <input
+                                type="password"
+                                id="ConfirmPassword"
+                                placeholder="Repeat password"
+                                required
+                                className={INPUT_STYLE}
+                            />
                         </div>
+                    </div>
 
-                        <div className="mt-4 text-center">
-                            <a href="#" className="text-sm text-blue-600 hover:text-blue-800 transition duration-150">
-                                Forgot Password?
-                            </a>
-                        </div>
-                        <div className="mt-4 text-center">
-                                                    <a href="#" className="text-sm text-blue-600 hover:text-blue-800 transition duration-150"
-                                                    onClick={(e) =>{
-                                                        e.preventDefault();
-                                                        onSwitch();
-                                                        }}
-                                                    >
-                                                        Login
-                                                    </a>
-                        </div>
-                    </form>
-                </div>
+                    {/* SIGN UP BUTTON */}
+                    <button
+                        type="submit"
+                        className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-150 ease-in-out shadow-lg active:scale-[0.98]"
+                    >
+                        Create Account
+                    </button>
+
+                    {/* BACK TO LOGIN */}
+                    <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+                        <button
+                            type="button"
+                            onClick={onSwitch}
+                            className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors inline-flex items-center gap-2"
+                        >
+                            <ArrowLeft size={16} />
+                            Already have an account? <span className="text-blue-600 font-bold">Log In</span>
+                        </button>
+                    </div>
+                </form>
             </div>
-        );
+        </div>
+    );
 }
+
 export default SignUp;

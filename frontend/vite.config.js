@@ -1,15 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import path from 'path' // <--- 1. IMPORT THE 'path' MODULE HERE
-
-const __dirname = path.resolve();
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
+  plugins: [
+    react(),
+    tailwindcss(), // This line is the "engine" that builds your styles
+  ],
 })

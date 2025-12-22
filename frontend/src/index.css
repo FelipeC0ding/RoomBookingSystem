@@ -1,10 +1,17 @@
+@import "tailwindcss";
+
+input {
+  color: black !important;
+  caret-color: black !important;
+}
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
+  color-scheme: light;
+  color: #000000;
+  /*color: rgba(255, 255, 255, 0.87);*/
   background-color: #242424;
 
   font-synthesis: none;
@@ -12,7 +19,31 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+/* Add this to your existing index.css */
+/* Fixes yellow autofill in Chrome/Safari */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px white inset !important;
+  -webkit-text-fill-color: #1a1a1a !important;
+}
 
+@layer components {
+  /* Custom smooth spinner for the login button */
+  .animate-spin-slow {
+    animation: spin 3s linear infinite;
+  }
+
+  /* Soft Entrance Animation for the Login Card */
+  .animate-slide-up {
+    animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 a {
   font-weight: 500;
   color: #646cff;
@@ -24,7 +55,6 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
@@ -42,7 +72,7 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: #e1e1e1
   cursor: pointer;
   transition: border-color 0.25s;
 }

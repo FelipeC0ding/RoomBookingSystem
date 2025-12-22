@@ -1,76 +1,70 @@
 import React from 'react';
-import { Monitor, Users, Settings } from 'lucide-react';
+import { Monitor, Users, Settings, ArrowLeft } from 'lucide-react';
 import { supabase } from './supabaseClient';
-
-const TAB_CLASSES = "flex items-center justify-center gap-2 p-3 bg-white rounded-lg border border-gray-200 cursor-pointer font-semibold text-gray-700 shadow-sm transition-all hover:border-gray-400";
+import FetchData from './DAL/FetchData'
+// Consistent Tailwind-only classes
+const TAB_CLASSES = "flex items-center justify-center gap-3 p-4 bg-white rounded-xl border border-gray-200 cursor-pointer font-semibold text-gray-700 shadow-sm transition-all hover:border-blue-400 hover:shadow-md active:scale-95";
 
 function AdminPage({ onGoBack }) {
 
     const handleManageUsersClick = async () => {
-        console.log("--- Executing Supabase Insert ---");
-
-        const { data, error } = await supabase
-            .from('User')
-            .insert([
-                {
-                    UserEmail: 'testingemail',
-                    Firstname: 'hello',
-                    Surname: 'Hello',
-                    Role: 'teacher',
-                    DepartmentID: 1
-                }
-            ]);
-
-        if (error) {
-            console.error('ERROR inserting User:', error);
-            alert(`ERROR: Insert failed. Check console for details. (Is RLS ON?)`);
-        } else {
-            console.log('SUCCESS:', data);
-            alert('SUCCESS: Test user added to database!');
-        }
+        try{
+            await FetchData.AddUser('testingfromDAL','firstname', 'surname', 'role', 1)
+        }catch(error){
+            throw error
+            }
     };
 
     return (
-        <div className="container p-4 bg-light rounded shadow mt-4">
-            <h2 className="mb-4">⚙️ Welcome to the Admin Panel!</h2>
-            <p className="mb-4">Select a management area below:</p>
+        <div className="min-h-screen bg-gray-50 p-6">
+            <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
 
-            <div className="d-flex flex-wrap gap-3 mb-5">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-8 border-b border-gray-100 pb-6">
+                    <div>
+                        <h2 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
+                            <Settings className="text-blue-600" /> Admin Panel
+                        </h2>
+                        <p className="text-gray-500 mt-1">System configuration and management</p>
+                    </div>
+                    <button
+                        onClick={onGoBack}
+                        className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-red-600 transition-colors"
+                    >
+                        <ArrowLeft size={18} /> Back to Menu
+                    </button>
+                </div>
 
-                <button
-                    type="button"
-                    // ✅ LINKED: Calls the correct, working function directly
-                    onClick={handleManageUsersClick}
-                    className={TAB_CLASSES}
-                >
-                    <Users size={20} className="text-gray-700" />
-                    Manage Users (Test Insert)
-                </button>
+                {/* Management Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+                    <button type="button" onClick={handleManageUsersClick} className={TAB_CLASSES}>
+                        <Users size={24} className="text-blue-500" />
+                        <span>Manage Users</span>
+                    </button>
 
-                <button
-                    type="button"
-                    onClick={onGoBack}
-                    className={TAB_CLASSES}
-                >
-                    <Monitor size={20} className="text-gray-700" />
-                    Manage Rooms
-                </button>
+                    <button type="button" onClick={onGoBack} className={TAB_CLASSES}>
+                        <Monitor size={24} className="text-green-500" />
+                        <span>Manage Rooms</span>
+                    </button>
 
-                <button
-                    type="button"
-                    onClick={onGoBack}
-                    className={TAB_CLASSES}
-                >
-                    <Settings size={20} className="text-gray-700" />
-                    Manage Settings
-                </button>
+                    <button type="button" onClick={onGoBack} className={TAB_CLASSES}>
+                        <Settings size={24} className="text-purple-500" />
+                        <span>System Settings</span>
+                    </button>
+                </div>
 
+                {/* Danger Zone */}
+                <div className="mt-6 pt-6 border-t border-gray-100">
+                    <button
+                        className="w-full md:w-auto px-6 py-3 bg-red-50 text-red-600 font-bold rounded-lg hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                        onClick={onGoBack}
+                    >
+                        Exit Admin
+                    </button>
+                </div>
             </div>
-
-            <button className="btn btn-danger mt-3" onClick={onGoBack}>
-                Go Back to Main Menu
-            </button>
         </div>
     );
 }
+
 export default AdminPage;
