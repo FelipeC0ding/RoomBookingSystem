@@ -1,7 +1,7 @@
 import { supabase } from '../supabaseClient';
 export default class FetchDAL{
 
-    static async AddUser (email,firstname, surname, role, department) {
+    static async AddUser (email,firstname, surname, role, departmentID, OrganisationID) {
         console.log("--- Executing Supabase Insert ---");
         const { data, error } = await supabase
             .from('User')
@@ -9,8 +9,9 @@ export default class FetchDAL{
                 UserEmail: email,
                 Firstname: firstname,
                 Surname: surname,
-                Role: role,
-                DepartmentID: department
+                Role: 'Teahcer',
+                DepartmentID: departmentID,
+                OrganisationID: OrganisationID
             }]);
 
         if (error) {
@@ -32,6 +33,43 @@ export default class FetchDAL{
         } else {
             console.log('SUCCESS:', data);
             alert('SUCCESS: Data fetched!');
+        }
+
+        return data
+
+    }
+
+    static async GetOrganisationID(Name){
+            console.log("--- Executing Dept fetch ---");
+            const{data, error} = await supabase
+                .from('Organisation')
+                .select('OrganisationID')
+                .eq('Name',Name)
+                .single()
+
+            if (error) {
+                throw error
+            } else {
+                alert(data);
+            }
+                console.log('IMPORTANT:', data);
+
+            return data.OrganisationID
+        }
+
+    static async GetDepartments(organisationID){
+        organisationID = await this.GetOrganisationID(organisationID)
+        console.log("--- Executing Dept fetch ---");
+        const{data, error} = await supabase
+            .from('Department')
+            .select('DepartmentID,Name')
+            .eq('OrganisationID',organisationID)
+
+        if (error) {
+        console.log(error)
+            throw error
+        } else {
+            console.log(organisationID);
         }
 
         return data

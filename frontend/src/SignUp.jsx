@@ -14,9 +14,15 @@ const INPUT_STYLE = `
 
 function SignUp({ onSwitch }) {
     const [schools, setSchools] = useState([]);
+    const [organisationID, setOrganisationID] = useState(0);
     const [loading, setLoading] = useState(true);
     const [selectedSchool, setSelectedSchool] = useState('')
-    useEffect(() =>{
+
+    const [Departments, setDepartments] = useState([]);
+    const [Deptloading, setDeptLoading] = useState(true);
+    const [selectedDepartment, setSelectedDepartment] = useState('')
+
+     useEffect(() =>{
         async function getALlSchools(){
             try{
 
@@ -33,9 +39,23 @@ function SignUp({ onSwitch }) {
 
         }
     getALlSchools()
-
-
     },[])
+
+
+        const getALlDepartments = async (organisationID)=> {
+            try{
+
+                setDeptLoading(true)
+                const data = await FetchData.GetDepartments(organisationID)
+                setDepartments(data)
+                setDeptLoading(false)
+
+            }catch(Error){
+                console.log('SignUp: ID = ', organisationID);
+
+            }
+        }
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
             <div className="w-full max-w-sm bg-white p-8 rounded-2xl shadow-xl border border-gray-200 animate-in fade-in zoom-in duration-300">
@@ -67,6 +87,40 @@ function SignUp({ onSwitch }) {
                         </div>
                     </div>
 
+                    <div className="space-y-1 mb-4">
+                        <label className="text-sm font-semibold text-gray-600 ml-1" htmlFor="Email">
+                            Firstname
+                        </label>
+                        <div className={INPUT_CONTAINER}>
+                            <Mail size={18} className={ICON_STYLE} />
+                            <input
+                                type="Firstname"
+                                id="Firstname"
+                                placeholder="Firstname"
+                                required
+                                className={INPUT_STYLE}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-1 mb-4">
+                        <label className="text-sm font-semibold text-gray-600 ml-1" htmlFor="Email">
+                            Surname
+                        </label>
+                        <div className={INPUT_CONTAINER}>
+                            <Mail size={18} className={ICON_STYLE} />
+                            <input
+                                type="Surname"
+                                id="Surname"
+                                placeholder="Surname"
+                                required
+                                className={INPUT_STYLE}
+                            />
+                        </div>
+                    </div>
+
+
+
                     {/* SCHOOL SELECT */}
                     <div className="space-y-1 mb-4">
                         <label className="text-sm font-semibold text-gray-600 ml-1" htmlFor="school-select">
@@ -77,7 +131,7 @@ function SignUp({ onSwitch }) {
 
                             <select
                                 value={selectedSchool}
-                                onChange={(e) => setSelectedSchool(e.target.value)}
+                                onChange={(e) => {getALlDepartments(e.target.value); setSelectedSchool() }}
                                 className={INPUT_STYLE}
                                 disabled={loading}
                             >
@@ -92,6 +146,36 @@ function SignUp({ onSwitch }) {
                                         className="text-black bg-white"
                                     >
                                         {school.Name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="space-y-1 mb-4">
+                        <label className="text-sm font-semibold text-gray-600 ml-1" htmlFor="school-select">
+                            Select Your Department
+                        </label>
+                        <div className={INPUT_CONTAINER}>
+                            <School size={18} className={ICON_STYLE} />
+
+                            <select
+                                value={selectedDepartment}
+                                onChange={(e) => setSelectedDepartment(e.target.value)}
+                                className={INPUT_STYLE}
+                                disabled={Deptloading}
+                            >
+                                <option value="" disabled className="text-black">
+                                    {loading ? "Loading Departments..." : "Select your Department"}
+                                </option>
+
+                                {Departments.map((department) => (
+                                    <option
+                                        key={department.DepartmentID}
+                                        value={department.DepartmentID}
+                                        className="text-black bg-white"
+                                    >
+                                        {department.Name}
                                     </option>
                                 ))}
                             </select>
@@ -136,6 +220,7 @@ function SignUp({ onSwitch }) {
                     <button
                         type="submit"
                         className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-150 ease-in-out shadow-lg active:scale-[0.98]"
+                        onClick = {FetchData.AddUser()}
                     >
                         Create Account
                     </button>
