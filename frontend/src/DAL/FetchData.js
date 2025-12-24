@@ -1,8 +1,12 @@
 import { supabase } from '../supabaseClient';
 export default class FetchDAL{
 
-    static async AddUser (email,firstname, surname, role, departmentID, OrganisationID) {
+    static async AddUser (email,password, passwordConfirm ,firstname, surname, role, OrganisationID, departmentID) {
         console.log("--- Executing Supabase Insert ---");
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+                email: email,
+                password: password,
+            });
         const { data, error } = await supabase
             .from('User')
             .insert([{
@@ -15,9 +19,10 @@ export default class FetchDAL{
             }]);
 
         if (error) {
+            console.log(error.message)
             throw error
+
         } else {
-            console.log('SUCCESS:', data[0]);
             alert('SUCCESS: Test user added to database!');
         }
     };
@@ -27,6 +32,7 @@ export default class FetchDAL{
         const{data, error} = await supabase
             .from('Organisation')
             .select('OrganisationID,Name')
+            .eq('LisenceStatus', true)
 
         if (error) {
             throw error
@@ -73,6 +79,25 @@ export default class FetchDAL{
         }
 
         return data
+
+    }
+
+    static async GetDepartmentID(Name){
+        console.log("--- Executing DeptID fetch ---");
+        const{data, error} = await supabase
+            .from('Department')
+            .select('DepartmentID')
+            .eq('Name',Name)
+            .single()
+
+        if (error) {
+        console.log(error)
+            throw error
+        } else {
+            console.log('Name',Name);
+        }
+
+        return data.DepartmentID
 
     }
 }
