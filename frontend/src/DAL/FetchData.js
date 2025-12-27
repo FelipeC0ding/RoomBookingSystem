@@ -6,6 +6,11 @@ export default class FetchDAL{
         const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: email,
                 password: password,
+                options: {
+                    data: {
+                      organisation_id: OrganisationID,
+                    },
+                  },
             });
         const { data, error } = await supabase
             .from('User')
@@ -23,7 +28,6 @@ export default class FetchDAL{
             throw error
 
         } else {
-            alert('SUCCESS: Test user added to database!');
         }
     };
 
@@ -31,14 +35,31 @@ export default class FetchDAL{
         console.log("--- Executing Supabase fetch ---");
         const{data, error} = await supabase
             .from('Organisation')
-            .select('OrganisationID,Name')
+            .select('OrganisationID,Name,StartTime,FinishTime,IntervalDuration,IntervalName')
             .eq('LisenceStatus', true)
 
         if (error) {
             throw error
         } else {
             console.log('SUCCESS:', data);
-            alert('SUCCESS: Data fetched!');
+        }
+
+        return data
+
+    }
+
+    static async getRooms(){
+        console.log('Getting Rooms')
+
+        const{data, error} = await supabase
+            .from('Room')
+            .select('RoomID,RoomName, Capacity,Location, Features, OrganisationID')
+            .eq('IsAvailable', true)
+
+        if (error) {
+            console.log(error.message, error.code)
+        } else {
+            console.log('SUCCESS:', data);
         }
 
         return data
@@ -55,8 +76,6 @@ export default class FetchDAL{
 
             if (error) {
                 throw error
-            } else {
-                alert(data);
             }
                 console.log('IMPORTANT:', data);
 

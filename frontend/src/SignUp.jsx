@@ -34,7 +34,8 @@ function SignUp({ onSwitch }) {
         title: '',
         message: ''
     });
-
+    // This checks all 3 rules and returns true or false
+    const isStrong = password.length >= 6 && /[A-Z]/.test(password) && /[^A-Za-z0-9]/.test(password);
     useEffect(() => {
         async function getALlSchools() {
             try {
@@ -65,7 +66,6 @@ function SignUp({ onSwitch }) {
         if (e) e.preventDefault();
         setIsSubmitting(true);
 
-        // Basic Validation using PopUp instead of alert
         if (password !== passwordConfirm) {
             setPopupConfig({
                 isOpen: true,
@@ -77,7 +77,20 @@ function SignUp({ onSwitch }) {
             return;
         }
 
+        if(!isStrong){
+            setPopupConfig({
+                isOpen: true,
+                type: 'error',
+                title: 'Password is weak',
+                message: 'Please make sure your password meets the requirements.'
+            });
+            setIsSubmitting(false);
+            return;
+
+        }
+
         try {
+
             const orgID = await FetchData.GetOrganisationID(selectedSchool);
             const deptID = await FetchData.GetDepartmentID(selectedDepartment);
 
@@ -89,13 +102,29 @@ function SignUp({ onSwitch }) {
                 title: 'Account Created!',
                 message: "Check your inbox! We've sent a link to verify your email."
             });
+
         } catch (error) {
-            setPopupConfig({
-                isOpen: true,
-                type: 'error',
-                title: 'Registration Failed',
-                message: error.message || "Something went wrong."
-            });
+            console.log(error.code)
+
+            if(parseInt(error.code) === 23505){
+
+                setPopupConfig({
+                    isOpen: true,
+                    type: 'error',
+                    title: 'Registration Failed',
+                    message: "Email already in use.  Contact your administrator."
+                });
+            }
+            else{
+                setPopupConfig({
+                    isOpen: true,
+                    type: 'error',
+                    title: 'Registration Failed',
+                    message: error.message || "Something went wrong."
+                });
+
+            }
+
         } finally {
             setIsSubmitting(false);
         }
@@ -135,7 +164,7 @@ function SignUp({ onSwitch }) {
                                 <label className="text-sm font-semibold text-gray-700 ml-1">Email Address</label>
                                 <div className={INPUT_CONTAINER}>
                                     <Mail size={18} className={ICON_STYLE} />
-                                    <input type="email" placeholder="jane.doe@school.edu" required className={INPUT_STYLE} onChange={(e) => setEmail(e.target.value)} />
+                                    <input type="email" placeholder="jane.doe@school.edu" autocomplete="disabled-stop-autofill" required className={INPUT_STYLE} onChange={(e) => setEmail(e.target.value)} />
                                 </div>
                             </div>
                         </div>
@@ -184,6 +213,21 @@ function SignUp({ onSwitch }) {
                                     <div className={INPUT_CONTAINER}>
                                         <Lock size={18} className={ICON_STYLE} />
                                         <input type="password" placeholder="••••••••" required className={INPUT_STYLE} onChange={(e) => setPassword(e.target.value)} />
+
+                                    </div>
+                                    <div className="mt-2">
+                                        <div className="h-1 w-full bg-gray-200 rounded-full">
+                                            <div
+                                                className={`h-1 transition-all duration-300 rounded-full ${
+                                                    isStrong ? 'w-full bg-green-500' : 'w-1/3 bg-red-400'
+                                                }`}
+                                            ></div>
+                                        </div>
+                                        <p className={`text-[10px] mt-1 font-medium ${isStrong ? 'text-green-600' : 'text-gray-400'}`}>
+                                            {isStrong
+                                                ? "✓ Password meets requirements"
+                                                : "Requires: 6+ chars, 1 Capital, 1 Special character"}
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="space-y-1">
@@ -197,15 +241,40 @@ function SignUp({ onSwitch }) {
                         </div>
                     </div>
 
-                    <div className="pt-4">
+                    <div className="pt-6 space-y-4">
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className={`w-full flex items-center justify-center gap-2 text-white font-bold py-4 px-4 rounded-xl transition duration-200 shadow-lg active:scale-[0.98] ${
-                                isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-                            }`}
+                            className={`
+                                w-full flex items-center justify-center gap-3 py-4 px-6 rounded-xl
+                                font-bold text-white transition-all duration-200
+                                shadow-md hover:shadow-lg active:scale-[0.98]
+                                ${isSubmitting
+                                    ? 'bg-gray-400 cursor-not-allowed'
+                                    : 'bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-200'
+                                }
+                            `}
                         >
-                            {isSubmitting ? "Creating Account..." : "Create Account"}
+                            {isSubmitting ? (
+                                <>
+                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Processing...
+                                </>
+                            ) : (
+                                "Create Account"
+                            )}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onSwitch}
+                            className="
+                                w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl
+                                text-gray-500 font-semibold transition-all duration-200
+                                hover:bg-gray-100 hover:text-gray-700 focus:outline-none
+                            "
+                        >
+                            <ArrowLeft size={18} />
+                            Already have an account? Log in
                         </button>
                     </div>
                 </form>

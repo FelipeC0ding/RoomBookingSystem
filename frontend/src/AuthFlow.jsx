@@ -52,6 +52,8 @@ function AuthFlow() {
         return <MainScreen />; // The dashboard or main content
     }
 
+
+
     return (
         isLoginView ? (
             <LoginPage
