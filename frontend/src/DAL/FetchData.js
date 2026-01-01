@@ -66,10 +66,17 @@ export default class FetchDAL{
 
     static async fetchBookings(bookingDate){
         try{
-        const {data, error} = await supabase
+        const { data, error } = await supabase
             .from('Booking')
-            .select('*')
-            .eq('BookingDate', bookingDate)
+            .select(`
+                *,
+                User (
+                    Firstname,
+                    Surname,
+                    UserEmail
+                )
+            `)
+            .eq('BookingDate', bookingDate);
 
         console.log(data)
         return data

@@ -7,13 +7,7 @@ const TAB_CLASSES = "flex items-center justify-center gap-3 p-4 bg-white rounded
 
 function AdminPage({ onGoBack }) {
 
-    const handleManageUsersClick = async () => {
-        try{
-            await FetchData.AddUser('testingfromDAL','firstname', 'surname', 'role', 1)
-        }catch(error){
-            throw error
-            }
-    };
+
 
     return (
         <div className="min-h-screen bg-gray-50 p-6">
@@ -37,7 +31,7 @@ function AdminPage({ onGoBack }) {
 
                 {/* Management Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-                    <button type="button" onClick={handleManageUsersClick} className={TAB_CLASSES}>
+                    <button type="button" className={TAB_CLASSES}>
                         <Users size={24} className="text-blue-500" />
                         <span>Manage Users</span>
                     </button>

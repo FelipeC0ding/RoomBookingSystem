@@ -5,7 +5,7 @@ import AuthFlow from './AuthFlow';
 import fetchData from './DAL/FetchData'
 import timeCalcs from './calculations/TimeCalcs'
 import PopUp from './PopUps/BookRoom';
-
+import logoutPage from './LoginPage';
 function LabeledInput({ label, icon: Icon, children }) {
     return (
         <div className="flex flex-col flex-1 min-w-[200px]">
@@ -98,7 +98,6 @@ function Menu(props) {
             </div>
 
             <div className="flex h-screen overflow-hidden bg-gray-50">
-              {/* 1. Your existing Sidebar */}
               <aside className="w-64 border-r border-gray-200 bg-white flex-shrink-0">
                 <div className="h-12 border-b border-gray-200 flex items-center px-4 font-semibold text-gray-700 bg-white sticky top-0">
                   Rooms
@@ -111,11 +110,9 @@ function Menu(props) {
                 ))}
               </aside>
 
-              {/* 2. The New Dynamic Time Grid */}
               <main className="flex-1 overflow-x-auto overflow-y-auto">
                 <div className="inline-min-w-full">
 
-                  {/* Header Row */}
                   <div className="flex sticky top-0 z-10 bg-white border-b border-gray-200">
                     {props.timePeriods.map((range, index) => (
                       <div
@@ -127,11 +124,9 @@ function Menu(props) {
                     ))}
                   </div>
 
-                  {/* Grid Rows */}
                   {props.rooms.map((room) => (
                     <div key={`row-${room.RoomID}`} className="flex border-b border-gray-100">
                       {props.timePeriods.map((range, index) => {
-                        // 1. Variable definition inside the map requires { } and return
                         const formattedRange = range.substring(0,5)
                         const currentBooking = bookingMap[`${String(room.RoomID)}-${String(formattedRange)}`];
                         console.log(formattedRange)
@@ -141,21 +136,18 @@ function Menu(props) {
                             className="w-56 h-[100px] flex-shrink-0 border-r border-gray-100 flex items-center justify-center bg-white transition-colors hover:bg-gray-50 p-2"
                           >
                             {currentBooking ? (
-                              /* --- DISPLAY BOOKED SLOT (RED CARD) --- */
-                              <div className="h-full w-full bg-red-600 rounded-xl p-3 text-white shadow-md flex flex-col justify-between group cursor-default animate-in fade-in zoom-in-95 duration-200">
-                                <div className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wider">
+                    <div className="h-full w-full bg-[oklch(29.3%_0.066_243.157)] rounded-xl p-3 text-white shadow-md flex flex-col justify-between group cursor-default animate-in fade-in zoom-in-95 duration-200">                                <div className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wider">
                                   <CheckCircle2 size={14} className="flex-shrink-0" />
                                   <span className="truncate">{currentBooking.Title}</span>
                                 </div>
                                 <div className="text-[11px] opacity-90 leading-tight">
-                                  <p className="font-medium">{range}</p>
+                                  <p className="font-medium">{`${currentBooking.User.Firstname} ${currentBooking.User.Surname}`}</p>
                                   <p className="truncate italic">
                                      {currentBooking.Description || 'No description'}
                                   </p>
                                 </div>
                               </div>
                             ) : (
-                              /* --- DISPLAY AVAILABLE BUTTON --- */
                               <button
                                 className="text-green-500 text-sm font-semibold hover:scale-110 transition-transform flex items-center gap-1"
                                 onClick={() => setPopupConfig({
@@ -199,29 +191,14 @@ function Menu(props) {
     );
 }
 
-function MainScreen() {
+function MainScreen({onLogout}) {
     const [roomFilter, setRoomFilter] = useState('');
     const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]);
     const [adminPage, setAdminPage] = useState(false);
-    const [logout, setLogout] = useState(false);
     const [Departments, setDepartments] = useState([]);
     const [rooms, setRooms] = useState([]);
     const [timePeriods, setTimePeriods] = useState([])
-    const handleAdminClick = () => setAdminPage(!adminPage);
-    const handleGoBack = () => setAdminPage(false);
-    const handleLogoutClick = () => setLogout(true);
 
-    function handleNewBooking() {
-        alert(`New Booking for ${viewDate} with filter: ${roomFilter}`);
-    }
-
-    if (logout) {
-        return <AuthFlow />;
-    }
-
-    if (adminPage) {
-        return <AdminPage onGoBack={handleGoBack} />;
-    }
 
     useEffect(()=>{
         async function getRoomsToDisplay(){
@@ -233,13 +210,35 @@ function MainScreen() {
     }, [])
 
     useEffect(()=>{
-            async function timePeriodsHeader(){
-                const data = await timeCalcs.getTimeHeaders()
-                setTimePeriods(data)
-            }
+        async function timePeriodsHeader(){
+            const data = await timeCalcs.getTimeHeaders()
+            setTimePeriods(data)
+        }
 
-            timePeriodsHeader()
-        }, [])
+        timePeriodsHeader()
+    }, [])
+
+    const handleAdminClick = () => setAdminPage(!adminPage);
+    const handleGoBack = () => setAdminPage(false);
+    const handleLogoutClick = () => {
+        if (onLogout) {
+            onLogout();
+        }
+    };
+
+    if(adminPage){
+        return <AdminPage onGoBack={handleGoBack} />;
+    }
+    function handleNewBooking() {
+        alert(`New Booking for ${viewDate} with filter: ${roomFilter}`);
+    }
+
+    const handleLogout = async () => {
+            await supabase.auth.signOut(); // Clears Supabase cookies/tokens
+            setIsLoggedIn(false);         // Flips the switch to "logged out"
+        };
+
+
     return (
         <Menu
             roomFilter={roomFilter}

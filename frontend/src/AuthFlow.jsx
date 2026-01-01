@@ -17,16 +17,14 @@ const signInUser = async (email, password) => {
     return data;
 };
 
-// Main Component that controls the flow
 function AuthFlow() {
     const [email, setEmail] = useState('');
     const [pass, setPass] = useState('');
     const [loading, setLoading] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [isLoginView, setIsLoginView] = useState(true); // true for Login, false for SignUp
+    const [isLoginView, setIsLoginView] = useState(true);
     const [authError, setAuthError] = useState(null);
 
-    // Function to handle form submission
     const handleLoginSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -42,16 +40,19 @@ function AuthFlow() {
         }
     };
 
-    // Function to switch between Login and Signup forms
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        setIsLoggedIn(false);
+    };
+
     const toggleView = () => {
         setIsLoginView(!isLoginView);
         setAuthError(null);
     };
 
     if (isLoggedIn) {
-        return <MainScreen />; // The dashboard or main content
+        return <MainScreen onLogout={handleLogout}/>;
     }
-
 
 
     return (
