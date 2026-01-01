@@ -12,9 +12,11 @@ export default class FetchDAL{
                     },
                   },
             });
+        const supabaseAuthId = authData.user.id;
         const { data, error } = await supabase
             .from('User')
             .insert([{
+                UserID: supabaseAuthId,
                 UserEmail: email,
                 Firstname: firstname,
                 Surname: surname,
@@ -27,15 +29,71 @@ export default class FetchDAL{
             console.log(error.message)
             throw error
 
-        } else {
         }
     };
+
+    static async getUserData(){
+        const { data: { user } } = await supabase.auth.getUser();
+        return user
+    }
+    static async createBooking(description, roomID, bookingDate,duration, title){
+        try{
+            let user = await this.getUserData();
+            let userID = user.id;
+            const date = new Date();
+            const dateBooked = date.toISOString().split('T')[0];
+            const timings = duration.split(" - ")
+            console.log(userID)
+            console.log(timings)
+            console.log("--- Executing booking Insert ---");
+                const { error } = await supabase
+                      .from('Booking')
+                      .insert({
+                       Description: description,
+                       RoomID: roomID,
+                       UserID: userID,
+                       BookingDate: bookingDate,
+                       BookingStartTime: timings[0],
+                       BookingEndTime: timings[1],
+                       CreatedTimeStamp: dateBooked,
+                       Title: title
+                       })
+        }
+        catch(error){
+            console.log(error.message)
+        }
+    }
+
+    static async fetchBookings(bookingDate){
+        try{
+        const {data, error} = await supabase
+            .from('Booking')
+            .select('*')
+            .eq('BookingDate', bookingDate)
+
+        console.log(data)
+        return data
+
+        }
+        catch(error){
+            console.log(error.message)
+        }
+
+
+
+    }
+    static async loggedInOrgID(){
+        const result = await supabase.auth.getUser();
+        const user = result.data.user
+        console.log('property',user?.user_metadata?.organisation_id)
+        return user?.user_metadata?.organisation_id
+    }
 
     static async GetSchools(){
         console.log("--- Executing Supabase fetch ---");
         const{data, error} = await supabase
             .from('Organisation')
-            .select('OrganisationID,Name,StartTime,FinishTime,IntervalDuration,IntervalName')
+            .select('OrganisationID,Name,StartTime,FinishTime,IntervalDuration,IntervalName,LunchStart, LunchEnd, BreakStart, BreakEnd')
             .eq('LisenceStatus', true)
 
         if (error) {
