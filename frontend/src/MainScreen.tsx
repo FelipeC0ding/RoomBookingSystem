@@ -1,11 +1,13 @@
 import React, { useState,useEffect } from 'react';
-import { Settings, LogOut, Filter, Calendar, CheckCircle2 } from 'lucide-react';
+import { User,Settings, LogOut, Filter, Calendar, CheckCircle2 } from 'lucide-react';
 import AdminPage from './Admin.jsx';
 import AuthFlow from './AuthFlow';
 import fetchData from './DAL/FetchData'
 import timeCalcs from './calculations/TimeCalcs'
 import PopUp from './PopUps/BookRoom';
 import logoutPage from './LoginPage';
+import ProfilePage from  './profile'
+
 function LabeledInput({ label, icon: Icon, children }) {
     return (
         <div className="flex flex-col flex-1 min-w-[200px]">
@@ -87,6 +89,14 @@ function Menu(props) {
                         </button>
 
                         <button
+                            className="p-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all active:scale-95"
+                            onClick={props.handleProfilePageClick}
+                            title="View Profile"
+                        >
+                            <User size={24} />
+                        </button>
+
+                        <button
                             className="p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all active:scale-95"
                             onClick={props.handleLogoutClick}
                             title="Logout"
@@ -129,7 +139,6 @@ function Menu(props) {
                       {props.timePeriods.map((range, index) => {
                         const formattedRange = range.substring(0,5)
                         const currentBooking = bookingMap[`${String(room.RoomID)}-${String(formattedRange)}`];
-                        console.log(formattedRange)
                         return (
                           <div
                             key={`${room.RoomID}-${index}`}
@@ -198,7 +207,7 @@ function MainScreen({onLogout}) {
     const [Departments, setDepartments] = useState([]);
     const [rooms, setRooms] = useState([]);
     const [timePeriods, setTimePeriods] = useState([])
-
+    const [profilePage, setProfilePage] = useState(false)
 
     useEffect(()=>{
         async function getRoomsToDisplay(){
@@ -217,14 +226,19 @@ function MainScreen({onLogout}) {
 
         timePeriodsHeader()
     }, [])
-
+    const handleProfilePageClick = () => setProfilePage(!profilePage);
     const handleAdminClick = () => setAdminPage(!adminPage);
     const handleGoBack = () => setAdminPage(false);
+    const handleProfileGoBack = () => setProfilePage(false);
     const handleLogoutClick = () => {
         if (onLogout) {
             onLogout();
         }
     };
+
+    if(profilePage){
+        return <ProfilePage onGoBack={handleProfileGoBack}/>;
+    }
 
     if(adminPage){
         return <AdminPage onGoBack={handleGoBack} />;
@@ -248,6 +262,7 @@ function MainScreen({onLogout}) {
             handleNewBooking={handleNewBooking}
             handleAdminClick={handleAdminClick}
             handleLogoutClick={handleLogoutClick}
+            handleProfilePageClick={handleProfilePageClick}
             rooms = {rooms}
             timePeriods = {timePeriods}
         />

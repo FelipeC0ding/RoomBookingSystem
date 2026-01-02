@@ -9,6 +9,8 @@ export default class FetchDAL{
                 options: {
                     data: {
                       organisation_id: OrganisationID,
+                      Firstname:firstname,
+                      Surname:surname,
                     },
                   },
             });
@@ -62,6 +64,20 @@ export default class FetchDAL{
         catch(error){
             console.log(error.message)
         }
+    }
+
+    static async fetchUserBookings(userId) {
+        const { data, error } = await supabase
+            .from('Booking')
+            .select(`
+                *,
+                Room ( RoomName, Capacity )
+            `)
+            .eq('UserID', userId)
+            .order('BookingDate', { ascending: false });
+
+        if (error) throw error;
+        return data;
     }
 
     static async fetchBookings(bookingDate){
