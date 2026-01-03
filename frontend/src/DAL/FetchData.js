@@ -198,6 +198,20 @@ export default class FetchDAL{
         }
 
         return data.DepartmentID
+    }
+
+    static async deleteBooking(bookingID){
+        try{
+            let id = parseInt(bookingID)
+            console.log(bookingID)
+            const response = await supabase
+              .from('Booking')
+              .delete()
+              .eq('BookingID', id)
+        }
+        catch(error){
+            console.log('deleting user error-',error.message)
+        }
 
     }
 }

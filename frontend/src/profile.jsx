@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Calendar, Clock, BookOpen, User as UserIcon, Inbox } from 'lucide-react';
 import fetchData from './DAL/FetchData';
+import PopUp from './PopUps/editBooking';
 
 function ProfilePage ({ onGoBack}){
     const [bookings, setBookings] = useState([]);
@@ -52,6 +53,31 @@ function ProfilePage ({ onGoBack}){
         getBookings();
 
     },[]);
+
+    const [popupConfig, setPopupConfig] = useState({
+        isOpen: false,
+        type: 'success',
+        title: '',
+        message: '',
+        BookingID:0,
+        timeDuration:'',
+        bookingDate:'',
+        description:''
+    });
+
+    function handleBookingClick(id,title,description,startTime, endTime,bookingDate){
+        setPopupConfig({
+          isOpen: true,
+          type: 'success',
+          title: title,
+          message: `Edit Booking`,
+          BookingID: id,
+          timeDuration: `${startTime} - ${endTime}`,
+          description: description,
+          bookingDate:bookingDate
+        })
+
+    }
 
 
 
@@ -107,6 +133,7 @@ function ProfilePage ({ onGoBack}){
                                new Date(booking.BookingDate).setHours(0,0,0,0) >= new Date().setHours(0,0,0,0) ? (
                                    <div
                                        key={booking.BookingID}
+                                       onClick = {()=>handleBookingClick(booking.BookingID, booking.Title, booking.Description, booking.BookingStartTime, booking.BookingEndTime,booking.BookingDate)}
                                        className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center justify-between hover:shadow-md transition-shadow group"
                                        >
                                        <div className="flex items-center gap-5">
@@ -126,7 +153,6 @@ function ProfilePage ({ onGoBack}){
                                                        </p>
                                                    </div>
 
-                                                   {/* Metadata Row: Date, Time, and Room */}
                                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-2 border-t border-slate-100">
                                                        <span className="flex items-center gap-1.5 text-xs font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-md">
                                                            <Calendar size={13} className="text-blue-500" />
@@ -208,6 +234,23 @@ function ProfilePage ({ onGoBack}){
                     )}
                 </div>
             </div>
+
+            <PopUp
+                isOpen={popupConfig.isOpen}
+                type={popupConfig.type}
+                title={popupConfig.title}
+                message={popupConfig.message}
+                BookingID={popupConfig.BookingID}
+                timeDuration={popupConfig.timeDuration}
+                bookingDate = {popupConfig.bookingDate}
+                description = {popupConfig.description}
+
+                onClose={async () => {
+                    setPopupConfig({ ...popupConfig, isOpen: false });
+                }}
+            />
+
+
         </div>
     );
 };
