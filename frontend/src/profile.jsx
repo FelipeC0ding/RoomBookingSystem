@@ -33,13 +33,18 @@ function ProfilePage ({ onGoBack}){
         getPendingNo();
     },[bookings]);
 
+    const loadData = async() => {
+        let user = await fetchData.getUserData();
+        const data = await fetchData.fetchUserBookings(user.id);
+        setBookings(data)
+    }
+
     useEffect(() =>{
 
         const getBookings = async ()=> {
             try{
                 let user = await fetchData.getUserData();
                 const data = await fetchData.fetchUserBookings(user.id);
-                console.log('bookings:',data)
                 setBookings(data)
             }
             catch(error){
@@ -247,6 +252,7 @@ function ProfilePage ({ onGoBack}){
 
                 onClose={async () => {
                     setPopupConfig({ ...popupConfig, isOpen: false });
+                    await loadData();
                 }}
             />
 

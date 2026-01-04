@@ -80,16 +80,16 @@ function PopUp({ isOpen, onClose, type = 'success', title, BookingID, timeDurati
         {/* Actions */}
         <div className="space-y-3">
           <button
-            onClick={()=>onClose()}
+            onClick={async ()=>{await fetchData.updateBooking(BookingID, bookingTitle , stateDescription);onClose();}}
             className={`w-full py-4 px-6 font-bold rounded-2xl transition-all shadow-lg shadow-blue-200 active:scale-[0.98] ${
               isSuccess ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700'
             } text-white text-lg`}
           >
-            {isSuccess ? 'Update Booking' : 'Try Again'}
+            Update Booking
           </button>
 
           <button
-              onClick={async ()=> {await fetchData.deleteBooking(BookingID); onClose();window.location.reload();}}
+              onClick={async ()=> {await fetchData.deleteBooking(BookingID); onClose();}}
               className="w-full py-3 px-4 rounded-2xl bg-red-600 text-white font-bold transition-all duration-200 hover:bg-red-700 hover:shadow-lg active:scale-[0.98]"
             >
             Delete

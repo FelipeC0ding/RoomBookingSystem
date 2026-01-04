@@ -65,7 +65,21 @@ export default class FetchDAL{
             console.log(error.message)
         }
     }
+    static async updateBooking(bookingID, title, description){
+        console.log(bookingID,title,description)
+        try{
+            const { error } = await supabase
+              .from('Booking')
+              .update({ 'Title': title, 'Description': description})
+              .eq('BookingID', bookingID)
+        }
+        catch(error){
 
+        }
+
+        console.log(this.fetchUserBookings())
+
+    }
     static async fetchUserBookings(userId) {
         const { data, error } = await supabase
             .from('Booking')

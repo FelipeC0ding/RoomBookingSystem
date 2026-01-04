@@ -73,12 +73,7 @@ function Menu(props) {
                     </LabeledInput>
 
                     <div className="flex gap-3 w-full md:w-auto">
-                        <button
-                            className="flex-1 md:flex-none px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95"
-                            onClick={props.handleNewBooking}
-                        >
-                            Filter
-                        </button>
+
 
                         <button
                             className="p-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all active:scale-95"
@@ -204,10 +199,10 @@ function MainScreen({onLogout}) {
     const [roomFilter, setRoomFilter] = useState('');
     const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]);
     const [adminPage, setAdminPage] = useState(false);
+    const [profilePage, setProfilePage] = useState(false)
     const [Departments, setDepartments] = useState([]);
     const [rooms, setRooms] = useState([]);
     const [timePeriods, setTimePeriods] = useState([])
-    const [profilePage, setProfilePage] = useState(false)
 
     useEffect(()=>{
         async function getRoomsToDisplay(){
@@ -247,9 +242,10 @@ function MainScreen({onLogout}) {
         alert(`New Booking for ${viewDate} with filter: ${roomFilter}`);
     }
 
+    const filteredRooms = rooms.filter(room => room.RoomName.toLowerCase().includes(roomFilter.toLowerCase()))
     const handleLogout = async () => {
-            await supabase.auth.signOut(); // Clears Supabase cookies/tokens
-            setIsLoggedIn(false);         // Flips the switch to "logged out"
+            await supabase.auth.signOut();
+            setIsLoggedIn(false);
         };
 
 
@@ -263,7 +259,7 @@ function MainScreen({onLogout}) {
             handleAdminClick={handleAdminClick}
             handleLogoutClick={handleLogoutClick}
             handleProfilePageClick={handleProfilePageClick}
-            rooms = {rooms}
+            rooms = {filteredRooms}
             timePeriods = {timePeriods}
         />
     );
