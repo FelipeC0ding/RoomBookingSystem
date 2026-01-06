@@ -1,12 +1,43 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Monitor, Users, Settings, ArrowLeft } from 'lucide-react';
+import ManageUsers from './ManageUsers';
+import ManageRooms from './ManageRooms';
 import { supabase } from './supabaseClient';
 import FetchData from './DAL/FetchData'
 // Consistent Tailwind-only classes
 const TAB_CLASSES = "flex items-center justify-center gap-3 p-4 bg-white rounded-xl border border-gray-200 cursor-pointer font-semibold text-gray-700 shadow-sm transition-all hover:border-blue-400 hover:shadow-md active:scale-95";
 
 function AdminPage({ onGoBack }) {
+    const [manageUsers, setManageUsers] = useState(false)
+    const [manageRooms, setManageRooms] = useState(false)
 
+    const handleManageRoomClick = ()=>{
+        setManageRooms(!manageRooms)
+    }
+
+    const onSwitch = () =>{
+
+        setManageRooms(false)
+    }
+
+    if(manageRooms){
+        return <ManageRooms onGoBack={onSwitch} />;
+    }
+    
+    
+    
+    const handleManageUserCLick = ()=>{
+        setManageUsers(!manageUsers)
+    }
+
+    const onclickBack = () =>{
+
+        setManageUsers(false)
+    }
+
+    if(manageUsers){
+        return <ManageUsers onGoBack={onclickBack} />;
+    }
 
 
     return (
@@ -31,12 +62,20 @@ function AdminPage({ onGoBack }) {
 
                 {/* Management Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-                    <button type="button" className={TAB_CLASSES}>
+                    <button 
+                        type="button" 
+                        className={TAB_CLASSES}
+                        onClick = {handleManageUserCLick}
+                        >
+
                         <Users size={24} className="text-blue-500" />
                         <span>Manage Users</span>
                     </button>
 
-                    <button type="button" onClick={onGoBack} className={TAB_CLASSES}>
+                    <button 
+                        type="button" 
+                        onClick={handleManageRoomClick} 
+                        className={TAB_CLASSES}>
                         <Monitor size={24} className="text-green-500" />
                         <span>Manage Rooms</span>
                     </button>

@@ -1,3 +1,4 @@
+import { data } from 'autoprefixer';
 import { supabase } from '../supabaseClient';
 export default class FetchDAL{
 
@@ -36,6 +37,7 @@ export default class FetchDAL{
 
     static async getUserData(){
         const { data: { user } } = await supabase.auth.getUser();
+        console.log(data)
         return user
     }
     static async createBooking(description, roomID, bookingDate,duration, title){
@@ -212,6 +214,24 @@ export default class FetchDAL{
         }
 
         return data.DepartmentID
+    }
+
+     static async GetDepartmentName(id){
+        console.log("--- Executing DeptName fetch ---");
+        const{data, error} = await supabase
+            .from('Department')
+            .select('Name')
+            .eq('DepartmentID',parseInt(id))
+            .single()
+
+        if (error) {
+        console.log(error)
+            throw error
+        } else {
+            console.log('Name',Name);
+        }
+
+        return data.Name
     }
 
     static async deleteBooking(bookingID){

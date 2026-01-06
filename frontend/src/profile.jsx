@@ -105,9 +105,20 @@ function ProfilePage ({ onGoBack}){
                         <div className="w-24 h-24 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
                             <UserIcon size={48} />
                         </div>
-                        <div className="text-center md:text-left flex-1">
-                            <h1 className="text-3xl font-bold text-slate-900">{user?.user_metadata.Firstname}</h1>
-                            <p className="text-slate-500 mt-1">Manage your room reservations and history</p>
+                        <div className="text-center md:text-left flex-1 space-y-1">
+                            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
+                                {user?.user_metadata.Firstname}
+                            </h1>
+                            
+                            <div className="flex items-center justify-center md:justify-start gap-2">
+                                
+                                <span className="text-slate-300">|</span>
+                                <p className="text-slate-500 text-sm">Room Booking Portal</p>
+                            </div>
+                            
+                            <p className="text-slate-400 text-sm italic">
+                                Manage your reservations and history
+                            </p>
                         </div>
 
                         {/* Booking Count Stat */}

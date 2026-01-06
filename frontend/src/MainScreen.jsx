@@ -1,12 +1,12 @@
 import React, { useState,useEffect } from 'react';
 import { User,Settings, LogOut, Filter, Calendar, CheckCircle2 } from 'lucide-react';
 import AdminPage from './Admin.jsx';
-import AuthFlow from './AuthFlow';
-import fetchData from './DAL/FetchData'
-import timeCalcs from './calculations/TimeCalcs'
-import PopUp from './PopUps/BookRoom';
-import logoutPage from './LoginPage';
-import ProfilePage from  './profile'
+import AuthFlow from './AuthFlow.jsx';
+import fetchData from './DAL/FetchData.js'
+import timeCalcs from './calculations/TimeCalcs.js'
+import PopUp from './PopUps/BookRoom.jsx';
+import logoutPage from './LoginPage.jsx';
+import ProfilePage from  './profile.jsx'
 
 function LabeledInput({ label, icon: Icon, children }) {
     return (
