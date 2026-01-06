@@ -10,9 +10,12 @@ import {
   LayoutGrid
 } from 'lucide-react';
 
+import EditRoom from './PopUps/editRoom'
+
 function ManageRooms({ onGoBack }) {
     const [searchTerm, setSearchTerm] = useState("");
-
+    const [popUpOpen, setPopUpState] = useState(false)
+    const [selectedRoom, setSelectedRoom] = useState('')
     const rooms = [
         { id: 1, name: "Boardroom A", capacity: 12, features: ["TV", "Wifi", "AC"] },
         { id: 2, name: "Huddle Room 1", capacity: 4, features: ["Wifi"] },
@@ -100,7 +103,10 @@ function ManageRooms({ onGoBack }) {
                                         <td className="px-8 py-6">
                                             {/* Actions are now always visible */}
                                             <div className="flex justify-end gap-3">
-                                                <button className="flex items-center gap-1 px-3 py-2 bg-slate-100 text-slate-600 rounded-lg font-bold text-xs hover:bg-blue-600 hover:text-white transition-all shadow-sm">
+                                                <button 
+                                                    className="flex items-center gap-1 px-3 py-2 bg-slate-100 text-slate-600 rounded-lg font-bold text-xs hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                                                    onClick={() => setPopUpState(true)}
+                                                >
                                                     <Edit2 size={14} />
                                                     Edit
                                                 </button>
@@ -117,6 +123,16 @@ function ManageRooms({ onGoBack }) {
                     </div>
                 </div>
             </div>
+
+            <EditRoom 
+                room={selectedRoom} 
+                isOpen={popUpOpen} 
+                onClose={() => setPopUpState(false)} 
+                onSave={(updatedData) => {
+                    console.log("Saving to Supabase:", updatedData);
+                    setPopUpState(false);
+                }}
+            />
         </div>
     );
 }

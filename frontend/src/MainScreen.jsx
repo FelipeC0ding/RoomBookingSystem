@@ -23,13 +23,13 @@ function LabeledInput({ label, icon: Icon, children }) {
 function Menu(props) {
 
     const [popupConfig, setPopupConfig] = useState({
-                isOpen: false,
-                type: 'success',
-                title: '',
-                message: '',
-                roomID:0,
-                timeDuration:''
-            });
+        isOpen: false,
+        type: 'success',
+        title: '',
+        message: '',
+        roomID:0,
+        timeDuration:''
+    });
     const [bookings, setBookings] = useState([]);
 
     const loadData = async () => {
