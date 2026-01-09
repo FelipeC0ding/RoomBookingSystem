@@ -150,9 +150,26 @@ export default class FetchDAL{
 
         const{data, error} = await supabase
             .from('Room')
-            .select('RoomID,RoomName, Capacity,Location, Features, OrganisationID')
+            .select('*')
             .eq('IsAvailable', true)
 
+        if (error) {
+            console.log(error.message, error.code)
+        } else {
+            console.log('SUCCESS:', data);
+        }
+
+        return data
+
+    }
+
+    static async UpdateRooms(id,roomName, location, capacity, features){
+        console.log('Saving room changes')
+
+        const { error } = await supabase
+          .from('Room')
+          .update({ 'RoomName': roomName, 'Location': location, 'Capacity':parseInt(capacity), 'Features':features})
+          .eq('RoomID', parseInt(id))
         if (error) {
             console.log(error.message, error.code)
         } else {

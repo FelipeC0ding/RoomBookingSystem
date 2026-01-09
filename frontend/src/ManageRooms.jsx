@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
   Plus, 
@@ -9,18 +9,22 @@ import {
   Filter,
   LayoutGrid
 } from 'lucide-react';
-
+import fetchData from './DAL/FetchData'
 import EditRoom from './PopUps/editRoom'
 
 function ManageRooms({ onGoBack }) {
     const [searchTerm, setSearchTerm] = useState("");
     const [popUpOpen, setPopUpState] = useState(false)
-    const [selectedRoom, setSelectedRoom] = useState('')
-    const rooms = [
-        { id: 1, name: "Boardroom A", capacity: 12, features: ["TV", "Wifi", "AC"] },
-        { id: 2, name: "Huddle Room 1", capacity: 4, features: ["Wifi"] },
-        { id: 3, name: "Conference Hall", capacity: 50, features: ["TV", "Wifi", "AC", "Projector"] },
-    ];
+    const [selectedRoom, setSelectedRoom] = useState(null)
+    const [rooms, setRooms] = useState([]);
+
+    useEffect(()=>{
+        async function getALlRooms(){
+            const data = await fetchData.getRooms();
+            setRooms(data)
+        }
+        getALlRooms();
+    },[])
 
     return (
         <div className="min-h-screen bg-slate-50 p-4 md:p-8">
@@ -44,7 +48,6 @@ function ManageRooms({ onGoBack }) {
                     </div>
                 </div>
 
-                {/* Main Action Bar - Integrated & Highly Visible */}
                 <div className="bg-white p-4 rounded-2xl shadow-md border border-slate-200 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
                     <div className="relative w-full md:w-96">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
@@ -70,7 +73,7 @@ function ManageRooms({ onGoBack }) {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50 border-b border-slate-200">
-                                    <th className="px-8 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter">Room Identity</th>
+                                    <th className="px-8 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter">Room Name</th>
                                     <th className="px-8 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter">Capacity</th>
                                     <th className="px-8 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter">Features</th>
                                     <th className="px-8 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter text-right">Management</th>
@@ -80,24 +83,23 @@ function ManageRooms({ onGoBack }) {
                                 {rooms.map((room) => (
                                     <tr key={room.id} className="hover:bg-slate-50/50 transition-colors">
                                         <td className="px-8 py-6">
-                                            <span className="block font-black text-slate-900 text-lg uppercase tracking-tight">{room.name}</span>
-                                            <span className="text-xs font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded">UUID: {room.id}</span>
+                                            <span className="block font-black text-slate-900 text-lg uppercase tracking-tight">{room.RoomName}</span>
                                         </td>
                                         <td className="px-8 py-6">
                                             <div className="flex items-center gap-2 text-slate-700">
                                                 <div className="p-2 bg-slate-100 rounded-lg">
                                                     <Users size={18} />
                                                 </div>
-                                                <span className="font-bold text-lg">{room.capacity}</span>
+                                                <span className="font-bold text-lg">{room.Capacity}</span>
                                             </div>
                                         </td>
                                         <td className="px-8 py-6">
                                             <div className="flex flex-wrap gap-2">
-                                                {room.features.map(f => (
-                                                    <span key={f} className="border border-slate-200 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-white">
-                                                        {f}
+                                                {room.Features && (
+                                                    <span className="border border-slate-200 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-white">
+                                                        {room.Features}
                                                     </span>
-                                                ))}
+                                                )}
                                             </div>
                                         </td>
                                         <td className="px-8 py-6">
@@ -105,7 +107,10 @@ function ManageRooms({ onGoBack }) {
                                             <div className="flex justify-end gap-3">
                                                 <button 
                                                     className="flex items-center gap-1 px-3 py-2 bg-slate-100 text-slate-600 rounded-lg font-bold text-xs hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-                                                    onClick={() => setPopUpState(true)}
+                                                    onClick={() =>
+                                                        {setPopUpState(true);
+                                                        setSelectedRoom(room);
+                                                        }}
                                                 >
                                                     <Edit2 size={14} />
                                                     Edit
@@ -129,6 +134,7 @@ function ManageRooms({ onGoBack }) {
                 isOpen={popUpOpen} 
                 onClose={() => setPopUpState(false)} 
                 onSave={(updatedData) => {
+                    fetchData.UpdateRooms(updatedData.id,updatedData.name, updatedData.location, updatedData.Capacity, updatedData.features)
                     console.log("Saving to Supabase:", updatedData);
                     setPopUpState(false);
                 }}
