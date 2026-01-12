@@ -30,12 +30,17 @@ function Menu(props) {
         roomID:0,
         timeDuration:''
     });
+    const [isLoading, setIsLoading] = useState(true); 
     const [bookings, setBookings] = useState([]);
 
     const loadData = async () => {
-        const data = await fetchData.fetchBookings(props.viewDate);
-        setBookings(data);
-
+        setIsLoading(true); // 2. Start loading
+        try {
+            const data = await fetchData.fetchBookings(props.viewDate);
+            setBookings(data);
+        } finally {
+            setIsLoading(false); // 3. Stop loading
+        }
     };
 
     useEffect(() => {
@@ -117,63 +122,63 @@ function Menu(props) {
 
               <main className="flex-1 overflow-x-auto overflow-y-auto">
                 <div className="inline-min-w-full">
-
-                  <div className="flex sticky top-0 z-10 bg-white border-b border-gray-200">
-                    {props.timePeriods.map((range, index) => (
-                      <div
-                        key={index}
-                        className="w-56 h-12 flex-shrink-0 border-r border-gray-200 flex items-center justify-center font-semibold text-gray-600 text-sm"
-                      >
-                        {range}
-                      </div>
-                    ))}
-                  </div>
-
-                  {props.rooms.map((room) => (
-                    <div key={`row-${room.RoomID}`} className="flex border-b border-gray-100">
-                      {props.timePeriods.map((range, index) => {
-                        const formattedRange = range.substring(0,5)
-                        const currentBooking = bookingMap[`${String(room.RoomID)}-${String(formattedRange)}`];
-                        return (
-                          <div
-                            key={`${room.RoomID}-${index}`}
-                            className="w-56 h-[100px] flex-shrink-0 border-r border-gray-100 flex items-center justify-center bg-white transition-colors hover:bg-gray-50 p-2"
-                          >
-                            {currentBooking ? (
-                    <div className="h-full w-full bg-[oklch(29.3%_0.066_243.157)] rounded-xl p-3 text-white shadow-md flex flex-col justify-between group cursor-default animate-in fade-in zoom-in-95 duration-200">                                <div className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wider">
-                                  <CheckCircle2 size={14} className="flex-shrink-0" />
-                                  <span className="truncate">{currentBooking.Title}</span>
-                                </div>
-                                <div className="text-[11px] opacity-90 leading-tight">
-                                  <p className="font-medium">{`${currentBooking.User.Firstname} ${currentBooking.User.Surname}`}</p>
-                                  <p className="truncate italic">
-                                     {currentBooking.Description || 'No description'}
-                                  </p>
-                                </div>
-                              </div>
-                            ) : (
-                              <button
-                                className="text-green-500 text-sm font-semibold hover:scale-110 transition-transform flex items-center gap-1"
-                                onClick={() => setPopupConfig({
-                                  isOpen: true,
-                                  type: 'success',
-                                  title: 'Make a booking',
-                                  message: `Booking ${room.RoomName}`,
-                                  roomID: room.RoomID,
-                                  timeDuration: `${range} - ${props.timePeriods[index + 1] || 'End'}`
-                                })}
-                              >
-                                <span className="text-lg">+</span> Available
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
+                    {/* Time Headers */}
+                    <div className="flex sticky top-0 z-10 bg-white border-b border-gray-200">
+                        {props.timePeriods.map((range, index) => (
+                            <div key={index} className="w-56 h-12 flex-shrink-0 border-r border-gray-200 flex items-center justify-center font-semibold text-gray-600 text-sm">
+                                {range}
+                            </div>
+                        ))}
                     </div>
-                  ))}
 
+                    {/* Dynamic Content: Loading vs Grid */}
+                    {isLoading ? (
+                        <div className="flex flex-col items-center justify-center py-40 text-slate-400 bg-white">
+                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
+                            <p className="font-medium animate-pulse">Fetching bookings...</p>
+                        </div>
+                    ) : (
+                        props.rooms.map((room) => (
+                            <div key={`row-${room.RoomID}`} className="flex border-b border-gray-100">
+                                {props.timePeriods.map((range, index) => {
+                                    const formattedRange = range.substring(0, 5);
+                                    const currentBooking = bookingMap[`${String(room.RoomID)}-${String(formattedRange)}`];
+                                    return (
+                                        <div key={`${room.RoomID}-${index}`} className="w-56 h-[100px] flex-shrink-0 border-r border-gray-100 flex items-center justify-center bg-white transition-colors hover:bg-gray-50 p-2">
+                                            {currentBooking ? (
+                                                <div className="h-full w-full bg-slate-800 rounded-xl p-3 text-white shadow-md flex flex-col justify-between group cursor-default">
+                                                    {/* Booking Info */}
+                                                    <div className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wider">
+                                                        <CheckCircle2 size={14} className="flex-shrink-0" />
+                                                        <span className="truncate">{currentBooking.Title}</span>
+                                                    </div>
+                                                    <div className="text-[11px] opacity-90 leading-tight">
+                                                        <p className="font-medium">{`${currentBooking.User.Firstname} ${currentBooking.User.Surname}`}</p>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    className="text-green-500 text-sm font-semibold hover:scale-110 transition-transform"
+                                                    onClick={() => setPopupConfig({
+                                                        isOpen: true,
+                                                        type: 'success',
+                                                        title: 'Make a booking',
+                                                        message: `Booking ${room.RoomName}`,
+                                                        roomID: room.RoomID,
+                                                        timeDuration: `${range} - ${props.timePeriods[index + 1] || 'End'}`
+                                                    })}
+                                                >
+                                                    + Available
+                                                </button>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ))
+                    )}
                 </div>
-              </main>
+            </main>
             </div>
 
             <PopUp

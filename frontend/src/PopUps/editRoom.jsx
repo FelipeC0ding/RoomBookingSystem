@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Users, Info } from 'lucide-react';
+import { X,Search, Save, Users, Info } from 'lucide-react';
 
 function EditRooms({ room, isOpen, onClose, onSave }) {
     const [formData, setFormData] = useState({
@@ -37,6 +37,17 @@ function EditRooms({ room, isOpen, onClose, onSave }) {
                                 <X size={24} />
                             </button>
                         </div>
+                    </div>
+
+                    <div className="relative mb-6">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                        <input
+                        type="text"
+                        placeholder="Search by room name or location..."
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-8 space-y-8">

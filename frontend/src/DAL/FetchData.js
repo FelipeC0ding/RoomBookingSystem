@@ -12,6 +12,7 @@ export default class FetchDAL{
                       organisation_id: OrganisationID,
                       Firstname:firstname,
                       Surname:surname,
+                      Role: role 
                     },
                   },
             });
@@ -164,7 +165,7 @@ export default class FetchDAL{
     }
 
     static async UpdateRooms(id,roomName, location, capacity, features){
-        console.log('Saving room changes')
+        console.log('Saving room changes', id, roomName, location, capacity, features)
 
         const { error } = await supabase
           .from('Room')

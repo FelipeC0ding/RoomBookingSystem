@@ -26,11 +26,19 @@ function ManageRooms({ onGoBack }) {
         getALlRooms();
     },[])
 
+
+    const filteredRooms = rooms.filter((room) => {
+        const term = searchTerm.toLowerCase();
+        return (
+            room.RoomName?.toLowerCase().includes(term) ||
+            room.Features?.toLowerCase().includes(term)
+        );
+    });
+
     return (
         <div className="min-h-screen bg-slate-50 p-4 md:p-8">
             <div className="max-w-6xl mx-auto">
                 
-                {/* Header Section */}
                 <div className="flex items-center justify-between mb-6">
                     <button 
                         onClick={onGoBack}
@@ -80,7 +88,7 @@ function ManageRooms({ onGoBack }) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {rooms.map((room) => (
+                                {filteredRooms.map((room) => (
                                     <tr key={room.id} className="hover:bg-slate-50/50 transition-colors">
                                         <td className="px-8 py-6">
                                             <span className="block font-black text-slate-900 text-lg uppercase tracking-tight">{room.RoomName}</span>
@@ -133,10 +141,13 @@ function ManageRooms({ onGoBack }) {
                 room={selectedRoom} 
                 isOpen={popUpOpen} 
                 onClose={() => setPopUpState(false)} 
-                onSave={(updatedData) => {
-                    fetchData.UpdateRooms(updatedData.id,updatedData.name, updatedData.location, updatedData.Capacity, updatedData.features)
+                onSave={async(id,updatedData) => {
+                    await fetchData.UpdateRooms(id,updatedData.name, updatedData.location, updatedData.capacity, updatedData.features)
                     console.log("Saving to Supabase:", updatedData);
                     setPopUpState(false);
+                    const updatedRoooms = await fetchData.getRooms();
+                    setRooms(updatedRoooms);
+                    setPopUpState()
                 }}
             />
         </div>
