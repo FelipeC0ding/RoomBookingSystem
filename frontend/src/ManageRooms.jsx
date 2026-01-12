@@ -142,5 +142,4 @@ function ManageRooms({ onGoBack }) {
         </div>
     );
 }
-
 export default ManageRooms;

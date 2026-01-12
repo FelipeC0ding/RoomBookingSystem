@@ -89,7 +89,7 @@ function EditRooms({ room, isOpen, onClose, onSave }) {
                         <div className="flex gap-3 rounded-2xl bg-amber-50 p-4 border border-amber-100">
                             <Info className="text-amber-500 shrink-0" size={20} />
                             <p className="text-xs text-amber-700 leading-relaxed font-medium">
-                                Changes will be saved to the database and updated across all staff dashboards immediately.
+                                Changes will be saved to the database and updated immediately.
                             </p>
                         </div>
                     </div>

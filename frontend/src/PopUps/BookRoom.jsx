@@ -53,6 +53,7 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
             </div>
           </div>
 
+
           <div className="space-y-2">
             <label className={LABEL_STYLE}>Description</label>
             <div className="relative group">
