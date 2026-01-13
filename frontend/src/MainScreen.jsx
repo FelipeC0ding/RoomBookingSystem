@@ -1,45 +1,30 @@
-import React, { useState,useEffect } from 'react';
-import { User,Settings, LogOut, Filter, Calendar, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Settings, LogOut, Filter, Calendar, CheckCircle2 } from 'lucide-react';
 import AdminPage from './Admin.jsx';
-import AuthFlow from './AuthFlow.jsx';
 import fetchData from './DAL/FetchData.js'
 import timeCalcs from './calculations/TimeCalcs.js'
 import PopUp from './PopUps/BookRoom.jsx';
-import logoutPage from './LoginPage.jsx';
-import ProfilePage from  './profile.jsx'
-
-function LabeledInput({ label, icon: Icon, children }) {
-    return (
-        <div className="flex flex-col flex-1 min-w-[200px]">
-            <label className="text-gray-600 font-bold text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
-                <Icon size={14} className="text-blue-500" />
-                {label}
-            </label>
-            {children}
-        </div>
-    );
-}
+import ProfilePage from './profile.jsx'
 
 function Menu(props) {
-
     const [popupConfig, setPopupConfig] = useState({
         isOpen: false,
         type: 'success',
         title: '',
         message: '',
-        roomID:0,
-        timeDuration:''
+        roomID: 0,
+        timeDuration: ''
     });
-    const [isLoading, setIsLoading] = useState(true); 
+    const [isLoading, setIsLoading] = useState(true);
     const [bookings, setBookings] = useState([]);
 
     const loadData = async () => {
-        setIsLoading(true); // 2. Start loading
+        setIsLoading(true);
         try {
             const data = await fetchData.fetchBookings(props.viewDate);
             setBookings(data);
         } finally {
-            setIsLoading(false); // 3. Stop loading
+            setIsLoading(false);
         }
     };
 
@@ -54,131 +39,118 @@ function Menu(props) {
     });
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            <div className="max-w-6xl mx-auto bg-white p-6 rounded-2xl shadow-xl border border-gray-100">
-                <div className="flex flex-col md:flex-row items-end gap-6">
+        <div className="min-h-screen bg-gray-50 flex flex-col items-center">
+            {/* 1. Sleek Title Banner */}
+            <div className="w-full max-w-5xl px-4 pt-6 flex flex-col gap-4">
+                <div className="relative overflow-hidden bg-white/40 backdrop-blur-md rounded-2xl p-5 border border-white/60 shadow-sm">
+                    <div className="relative flex items-center justify-between">
+                        <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-2">
+                                <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"></span>
+                                <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-[0.3em]">Live Dashboard</span>
+                            </div>
+                            <h1 className="text-xl font-light text-slate-800 tracking-tight">Main <span className="font-semibold text-blue-600">Menu</span></h1>
+                        </div>
+                        <div className="hidden sm:flex flex-col items-end">
+                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Active Session</span>
+                            <span className="text-xs font-semibold text-slate-600">
+                                {new Date(props.viewDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                            </span>
+                        </div>
+                    </div>
+                </div>
 
-                    <LabeledInput label="Filter Rooms" icon={Filter}>
+                {/* 2. Compact Control Bar */}
+                <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
+                    <div className="relative w-64 group">
+                        <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
                             type="text"
                             value={props.roomFilter}
                             onChange={(e) => props.setRoomFilter(e.target.value)}
-                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                            placeholder="e.g., IT Lab B"
+                            className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-blue-500/20"
+                            placeholder="Filter Rooms..."
                         />
-                    </LabeledInput>
-
-                    <LabeledInput label="View Date" icon={Calendar}>
+                    </div>
+                    <div className="relative group">
+                        <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                         <input
                             type="date"
                             value={props.viewDate}
                             onChange={(e) => props.setViewDate(e.target.value)}
-                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                            className="bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
                         />
-                    </LabeledInput>
-
-                    <div className="flex gap-3 w-full md:w-auto">
-
-
-                        <button
-                            className="p-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all active:scale-95"
-                            onClick={props.handleAdminClick}
-                            title="Admin Settings"
-                        >
-                            <Settings size={24} />
-                        </button>
-
-                        <button
-                            className="p-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all active:scale-95"
-                            onClick={props.handleProfilePageClick}
-                            title="View Profile"
-                        >
-                            <User size={24} />
-                        </button>
-
-                        <button
-                            className="p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all active:scale-95"
-                            onClick={props.handleLogoutClick}
-                            title="Logout"
-                        >
-                            <LogOut size={24} />
-                        </button>
+                    </div>
+                    <div className="flex-1" />
+                    <div className="flex gap-2">
+                        <button onClick={props.handleAdminClick} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"><Settings size={20}/></button>
+                        <button onClick={props.handleProfilePageClick} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"><User size={20}/></button>
+                        <button onClick={props.handleLogoutClick} className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-colors"><LogOut size={20}/></button>
                     </div>
                 </div>
             </div>
 
-            <div className="flex h-screen overflow-hidden bg-gray-50">
-              <aside className="w-64 border-r border-gray-200 bg-white flex-shrink-0">
-                <div className="h-12 border-b border-gray-200 flex items-center px-4 font-semibold text-gray-700 bg-white sticky top-0">
-                  Rooms
-                </div>
-                {props.rooms.map((room) => (
-                  <div key={room.RoomID} className="h-[100px] p-4 border-b border-gray-100 flex flex-col justify-center bg-white">
-                    <h3 className="text-lg font-bold text-slate-800 leading-tight">{room.RoomName}</h3>
-                    <p className="text-sm text-slate-500 mt-1">{room.Capacity} seats, {room.Features}</p>
-                  </div>
-                ))}
-              </aside>
-
-              <main className="flex-1 overflow-x-auto overflow-y-auto">
-                <div className="inline-min-w-full">
-                    {/* Time Headers */}
-                    <div className="flex sticky top-0 z-10 bg-white border-b border-gray-200">
-                        {props.timePeriods.map((range, index) => (
-                            <div key={index} className="w-56 h-12 flex-shrink-0 border-r border-gray-200 flex items-center justify-center font-semibold text-gray-600 text-sm">
-                                {range}
+            {/* 3. The Joined, Centered Grid */}
+            <div className="w-full flex-1 overflow-auto p-6 flex justify-center">
+                <div className="inline-flex bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden h-fit">
+                    
+                    {/* Time Column */}
+                    <div className="w-24 bg-gray-50/50 border-r border-gray-200 flex-shrink-0">
+                        <div className="h-12 border-b border-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50">
+                            Time
+                        </div>
+                        {props.timePeriods.map((time, i) => (
+                            <div key={i} className="h-20 border-b border-gray-100 flex items-center justify-center text-[11px] font-bold text-gray-500">
+                                {time}
                             </div>
                         ))}
                     </div>
 
-                    {/* Dynamic Content: Loading vs Grid */}
-                    {isLoading ? (
-                        <div className="flex flex-col items-center justify-center py-40 text-slate-400 bg-white">
-                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
-                            <p className="font-medium animate-pulse">Fetching bookings...</p>
-                        </div>
-                    ) : (
-                        props.rooms.map((room) => (
-                            <div key={`row-${room.RoomID}`} className="flex border-b border-gray-100">
-                                {props.timePeriods.map((range, index) => {
-                                    const formattedRange = range.substring(0, 5);
-                                    const currentBooking = bookingMap[`${String(room.RoomID)}-${String(formattedRange)}`];
-                                    return (
-                                        <div key={`${room.RoomID}-${index}`} className="w-56 h-[100px] flex-shrink-0 border-r border-gray-100 flex items-center justify-center bg-white transition-colors hover:bg-gray-50 p-2">
-                                            {currentBooking ? (
-                                                <div className="h-full w-full bg-slate-800 rounded-xl p-3 text-white shadow-md flex flex-col justify-between group cursor-default">
-                                                    {/* Booking Info */}
-                                                    <div className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wider">
-                                                        <CheckCircle2 size={14} className="flex-shrink-0" />
-                                                        <span className="truncate">{currentBooking.Title}</span>
-                                                    </div>
-                                                    <div className="text-[11px] opacity-90 leading-tight">
-                                                        <p className="font-medium">{`${currentBooking.User.Firstname} ${currentBooking.User.Surname}`}</p>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <button
-                                                    className="text-green-500 text-sm font-semibold hover:scale-110 transition-transform"
-                                                    onClick={() => setPopupConfig({
-                                                        isOpen: true,
-                                                        type: 'success',
-                                                        title: 'Make a booking',
-                                                        message: `Booking ${room.RoomName}`,
-                                                        roomID: room.RoomID,
-                                                        timeDuration: `${range} - ${props.timePeriods[index + 1] || 'End'}`
-                                                    })}
-                                                >
-                                                    + Available
-                                                </button>
-                                            )}
-                                        </div>
-                                    );
-                                })}
+                    {/* Room Columns */}
+                    {props.rooms.map((room) => (
+                        <div key={room.RoomID} className="w-64 border-r border-gray-200 last:border-r-0 flex-shrink-0">
+                            <div className="h-12 border-b border-gray-200 bg-white flex flex-col items-center justify-center px-4">
+                                <span className="text-xs font-bold text-slate-800 uppercase tracking-tight truncate w-full text-center">{room.RoomName}</span>
+                                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">{room.Capacity} Seats</span>
                             </div>
-                        ))
-                    )}
+
+                            {props.timePeriods.map((range, idx) => {
+                                const formattedRange = range.substring(0, 5);
+                                const currentBooking = bookingMap[`${String(room.RoomID)}-${String(formattedRange)}`];
+                                
+                                return (
+                                    <div key={idx} className="h-20 border-b border-gray-50 p-2 flex items-center justify-center">
+                                        {currentBooking ? (
+                                            <div className="w-full h-full bg-slate-800 rounded-lg p-2.5 text-white shadow-sm flex flex-col justify-center border-l-4 border-blue-500 overflow-hidden">
+                                                <div className="flex items-center gap-1.5 mb-0.5">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                                                    <span className="text-[10px] font-bold uppercase truncate">{currentBooking.Title}</span>
+                                                </div>
+                                                <span className="text-[14px] opacity-60 font-medium truncate ml-3">
+                                                    {currentBooking.User.Firstname} {currentBooking.User.Surname}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <button 
+                                                onClick={() => setPopupConfig({
+                                                    isOpen: true,
+                                                    type: 'success',
+                                                    title: 'Make a booking',
+                                                    message: `Booking ${room.RoomName}`,
+                                                    roomID: room.RoomID,
+                                                    timeDuration: `${range} - ${props.timePeriods[idx + 1] || 'End'}`
+                                                })}
+                                                className="text-[10px] font-bold text-emerald-500 tracking-tight hover:scale-105 transition-transform"
+                                            >
+                                                + Available
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ))}
                 </div>
-            </main>
             </div>
 
             <PopUp
@@ -188,71 +160,46 @@ function Menu(props) {
                 message={popupConfig.message}
                 roomID={popupConfig.roomID}
                 timeDuration={popupConfig.timeDuration}
-                bookingDate = {props.viewDate}
+                bookingDate={props.viewDate}
                 onClose={async () => {
                     setPopupConfig({ ...popupConfig, isOpen: false });
                     await loadData();
                 }}
-
-
             />
         </div>
     );
 }
 
-function MainScreen({onLogout}) {
+function MainScreen({ onLogout }) {
     const [roomFilter, setRoomFilter] = useState('');
     const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]);
     const [adminPage, setAdminPage] = useState(false);
     const [profilePage, setProfilePage] = useState(false)
-    const [Departments, setDepartments] = useState([]);
     const [rooms, setRooms] = useState([]);
     const [timePeriods, setTimePeriods] = useState([])
 
-    useEffect(()=>{
-        async function getRoomsToDisplay(){
+    useEffect(() => {
+        async function getRoomsToDisplay() {
             const data = await fetchData.getRooms()
             setRooms(data)
         }
-
         getRoomsToDisplay()
     }, [])
 
-    useEffect(()=>{
-        async function timePeriodsHeader(){
+    useEffect(() => {
+        async function timePeriodsHeader() {
             const data = await timeCalcs.getTimeHeaders()
             setTimePeriods(data)
         }
-
         timePeriodsHeader()
     }, [])
-    const handleProfilePageClick = () => setProfilePage(!profilePage);
-    const handleAdminClick = () => setAdminPage(!adminPage);
-    const handleGoBack = () => setAdminPage(false);
-    const handleProfileGoBack = () => setProfilePage(false);
-    const handleLogoutClick = () => {
-        if (onLogout) {
-            onLogout();
-        }
-    };
 
-    if(profilePage){
-        return <ProfilePage onGoBack={handleProfileGoBack}/>;
-    }
+    if (profilePage) return <ProfilePage onGoBack={() => setProfilePage(false)} />;
+    if (adminPage) return <AdminPage onGoBack={() => setAdminPage(false)} />;
 
-    if(adminPage){
-        return <AdminPage onGoBack={handleGoBack} />;
-    }
-    function handleNewBooking() {
-        alert(`New Booking for ${viewDate} with filter: ${roomFilter}`);
-    }
-
-    const filteredRooms = rooms.filter(room => room.RoomName.toLowerCase().includes(roomFilter.toLowerCase()))
-    const handleLogout = async () => {
-            await supabase.auth.signOut();
-            setIsLoggedIn(false);
-        };
-
+    const filteredRooms = rooms.filter(room => 
+        room.RoomName.toLowerCase().includes(roomFilter.toLowerCase())
+    );
 
     return (
         <Menu
@@ -260,12 +207,11 @@ function MainScreen({onLogout}) {
             setRoomFilter={setRoomFilter}
             viewDate={viewDate}
             setViewDate={setViewDate}
-            handleNewBooking={handleNewBooking}
-            handleAdminClick={handleAdminClick}
-            handleLogoutClick={handleLogoutClick}
-            handleProfilePageClick={handleProfilePageClick}
-            rooms = {filteredRooms}
-            timePeriods = {timePeriods}
+            handleAdminClick={() => setAdminPage(true)}
+            handleLogoutClick={onLogout}
+            handleProfilePageClick={() => setProfilePage(true)}
+            rooms={filteredRooms}
+            timePeriods={timePeriods}
         />
     );
 }

@@ -111,7 +111,7 @@ export default class FetchDAL{
             `)
             .eq('BookingDate', bookingDate);
 
-        console.log(data)
+        console.log('Bookings',data)
         return data
 
         }

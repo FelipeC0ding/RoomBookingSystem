@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { X,Search, Save, Users, Info } from 'lucide-react';
 
-function EditRooms({ room, isOpen, onClose, onSave }) {
+function EditRooms({ room, isOpen, onClose, onSave }) 
+{
     const [formData, setFormData] = useState({
         name: "",
         location: "",
         capacity: 0,
         features: ""
     });
+    const [searchTerm,setSearchTerm] = useState('')
 
     useEffect(() => {
         if (room) {
@@ -26,7 +28,6 @@ function EditRooms({ room, isOpen, onClose, onSave }) {
     return (
         <div className="fixed inset-0 z-50 flex justify-end overflow-hidden bg-slate-900/40 backdrop-blur-sm">
             <div className="absolute inset-0" onClick={onClose} />
-
             <div className="relative w-full max-w-md bg-white shadow-2xl animate-in slide-in-from-right duration-300">
                 <div className="flex h-full flex-col">
 
