@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { X,Search, Save, Users, Info } from 'lucide-react';
-
-function EditRooms({ room, isOpen, onClose, onSave }) 
-{
+import { X, Save, Users, Info, Trash2 } from 'lucide-react';
+import fetchData from '../DAL/FetchData';
+function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
     const [formData, setFormData] = useState({
         name: "",
         location: "",
         capacity: 0,
         features: ""
     });
-    const [searchTerm,setSearchTerm] = useState('')
+    
+    // Safety state for deletion confirmation
+    const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
     useEffect(() => {
         if (room) {
@@ -21,7 +22,8 @@ function EditRooms({ room, isOpen, onClose, onSave })
                 features: room.Features || ""
             });
         }
-    }, [room]);
+        setIsConfirmingDelete(false);
+    }, [room, isOpen]);
 
     if (!isOpen) return null;
 
@@ -31,28 +33,21 @@ function EditRooms({ room, isOpen, onClose, onSave })
             <div className="relative w-full max-w-md bg-white shadow-2xl animate-in slide-in-from-right duration-300">
                 <div className="flex h-full flex-col">
 
-                    <div className="bg-slate-900 p-6 text-white">
+                    {/* Header - Cleaned up without the delete button */}
+                    <div className="bg-slate-900 p-6 text-white border-b border-slate-800">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-xl font-black uppercase tracking-tight">Edit Room Details</h2>
+                            <div className="flex flex-col">
+                                <h2 className="text-xl font-black uppercase tracking-tight">Edit Room</h2>
+                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">ID: {room?.RoomID}</span>
+                            </div>
                             <button onClick={onClose} className="rounded-lg p-2 hover:bg-slate-800 transition-colors">
                                 <X size={24} />
                             </button>
                         </div>
                     </div>
 
-                    <div className="relative mb-6">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                        <input
-                        type="text"
-                        placeholder="Search by room name or location..."
-                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-
+                    {/* Scrollable Content */}
                     <div className="flex-1 overflow-y-auto p-8 space-y-8">
-
                         <div className="space-y-2">
                             <label className="text-xs font-black uppercase tracking-widest text-slate-400">Room Name</label>
                             <input
@@ -106,21 +101,51 @@ function EditRooms({ room, isOpen, onClose, onSave })
                         </div>
                     </div>
 
-                    <div className="border-t border-slate-100 p-6 bg-slate-50">
-                        <div className="flex gap-3">
-                            <button
-                                onClick={onClose}
-                                className="flex-1 rounded-xl bg-white border border-slate-200 p-4 font-black text-slate-600 hover:bg-slate-100 transition-all"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={() => onSave(room.RoomID, formData)}
-                                className="flex-1 rounded-xl bg-blue-600 p-4 font-black text-white shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-2"
-                            >
-                                <Save size={20} /> Save Changes
-                            </button>
-                        </div>
+                    {/* Footer Actions - Now including Delete */}
+                    <div className="border-t border-slate-100 p-6 bg-slate-50 space-y-3">
+                        {!isConfirmingDelete ? (
+                            <div className="flex gap-3">
+                                {/* Delete Button */}
+                                <button
+                                    onClick={() => setIsConfirmingDelete(true)}
+                                    className="flex items-center justify-center rounded-xl border-2 border-red-100 bg-white p-4 font-black text-red-600 hover:bg-red-50 hover:border-red-200 transition-all group"
+                                >
+                                    <Trash2 size={20} className="group-hover:scale-110 transition-transform" />
+                                </button>
+                                
+                                {/* Cancel Button */}
+                                <button
+                                    onClick={onClose}
+                                    className="flex-[2] rounded-xl bg-white border border-slate-200 p-4 font-black text-slate-600 hover:bg-slate-100 transition-all"
+                                >
+                                    Cancel
+                                </button>
+
+                                {/* Save Button */}
+                                <button
+                                    onClick={() => onSave(room.RoomID, formData)}
+                                    className="flex-[3] rounded-xl bg-blue-600 p-4 font-black text-white shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Save size={20} /> Save Changes
+                                </button>
+                            </div>
+                        ) : (
+                            /* Deletion Confirmation State */
+                            <div className="flex gap-3 animate-in fade-in slide-in-from-bottom-2">
+                                <button
+                                    onClick={()=>onDelete(room.RoomID)}
+                                    className="flex-1 rounded-xl bg-red-600 p-4 font-black text-white shadow-lg shadow-red-200 hover:bg-red-700 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Trash2 size={20} /> Confirm Delete
+                                </button>
+                                <button
+                                    onClick={() => setIsConfirmingDelete(false)}
+                                    className="flex-1 rounded-xl bg-white border border-slate-200 p-4 font-black text-slate-600 hover:bg-slate-100 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

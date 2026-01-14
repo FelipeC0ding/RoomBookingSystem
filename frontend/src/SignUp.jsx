@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Lock, UserPlus, ArrowLeft, School, User } from 'lucide-react';
+import { Mail, Lock, UserPlus, ArrowLeft, School, User, ShieldCheck } from 'lucide-react';
 import FetchData from './DAL/FetchData';
 import PopUp from './PopUps/popUpSignUp';
 
@@ -24,18 +24,19 @@ function SignUp({ onSwitch }) {
     const [firstname, setFirstname] = useState('');
     const [surname, setSurname] = useState('');
     const [email, setEmail] = useState('');
+    const [role, setRole] = useState('standard'); // Default role
     const [password, setPassword] = useState('');
     const [passwordConfirm, setPasswordConfirm] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [showSuccess, setShowSuccess] = useState(false);
     const [popupConfig, setPopupConfig] = useState({
         isOpen: false,
         type: 'success',
         title: '',
         message: ''
     });
-    // This checks all 3 rules and returns true or false
+
     const isStrong = password.length >= 6 && /[A-Z]/.test(password) && /[^A-Za-z0-9]/.test(password);
+
     useEffect(() => {
         async function getALlSchools() {
             try {
@@ -84,17 +85,16 @@ function SignUp({ onSwitch }) {
                 title: 'Password is weak',
                 message: 'Please make sure your password meets the requirements.'
             });
-            ik(false);
+            setIsSubmitting(false);
             return;
-
         }
 
         try {
-
             const orgID = await FetchData.GetOrganisationID(selectedSchool);
             const deptID = await FetchData.GetDepartmentID(selectedDepartment);
 
-            await FetchData.AddUser(email, password, passwordConfirm, firstname, surname, 'teacher', orgID, deptID);
+            // Pass the selected role to your API
+            await FetchData.AddUser(email, password, firstname, surname, role, orgID, deptID);
 
             setPopupConfig({
                 isOpen: true,
@@ -104,27 +104,21 @@ function SignUp({ onSwitch }) {
             });
 
         } catch (error) {
-            console.log(error.code)
-
             if(parseInt(error.code) === 23505){
-
                 setPopupConfig({
                     isOpen: true,
                     type: 'error',
                     title: 'Registration Failed',
-                    message: "Email already in use.  Contact your administrator."
+                    message: "Email already in use. Contact your administrator."
                 });
-            }
-            else{
+            } else {
                 setPopupConfig({
                     isOpen: true,
                     type: 'error',
                     title: 'Registration Failed',
                     message: error.message || "Something went wrong."
                 });
-
             }
-
         } finally {
             setIsSubmitting(false);
         }
@@ -164,13 +158,31 @@ function SignUp({ onSwitch }) {
                                 <label className="text-sm font-semibold text-gray-700 ml-1">Email Address</label>
                                 <div className={INPUT_CONTAINER}>
                                     <Mail size={18} className={ICON_STYLE} />
-                                    <input type="email" placeholder="jane.doe@school.edu" autocomplete="disabled-stop-autofill" required className={INPUT_STYLE} onChange={(e) => setEmail(e.target.value)} />
+                                    <input type="email" placeholder="jane.doe@school.edu" autoComplete="off" required className={INPUT_STYLE} onChange={(e) => setEmail(e.target.value)} />
                                 </div>
                             </div>
                         </div>
 
                         <div className="space-y-4">
                             <h3 className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-2">Work</h3>
+                            
+                            {/* Role Selection Dropdown */}
+                            <div className="space-y-1">
+                                <label className="text-sm font-semibold text-gray-700 ml-1">Account Role</label>
+                                <div className={INPUT_CONTAINER}>
+                                    <ShieldCheck size={18} className={ICON_STYLE} />
+                                    <select
+                                        value={role}
+                                        onChange={(e) => setRole(e.target.value)}
+                                        className={INPUT_STYLE}
+                                        required
+                                    >
+                                        <option value="standard">Standard</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             <div className="space-y-1">
                                 <label className="text-sm font-semibold text-gray-700 ml-1">School</label>
                                 <div className={INPUT_CONTAINER}>
@@ -180,6 +192,7 @@ function SignUp({ onSwitch }) {
                                         onChange={(e) => { getALlDepartments(e.target.value); setSelectedSchool(e.target.value) }}
                                         className={INPUT_STYLE}
                                         disabled={loading}
+                                        required
                                     >
                                         <option value="" disabled>{loading ? "Loading schools..." : "Select school"}</option>
                                         {schools.map((school) => (
@@ -198,6 +211,7 @@ function SignUp({ onSwitch }) {
                                         onChange={(e) => setSelectedDepartment(e.target.value)}
                                         className={INPUT_STYLE}
                                         disabled={!selectedSchool || Deptloading}
+                                        required
                                     >
                                         <option value="" disabled>{Deptloading ? "Loading..." : "Select department"}</option>
                                         {Departments.map((dept) => (
@@ -207,13 +221,12 @@ function SignUp({ onSwitch }) {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                                 <div className="space-y-1">
                                     <label className="text-sm font-semibold text-gray-700 ml-1">Password</label>
                                     <div className={INPUT_CONTAINER}>
                                         <Lock size={18} className={ICON_STYLE} />
                                         <input type="password" placeholder="••••••••" required className={INPUT_STYLE} onChange={(e) => setPassword(e.target.value)} />
-
                                     </div>
                                     <div className="mt-2">
                                         <div className="h-1 w-full bg-gray-200 rounded-full">
@@ -287,7 +300,7 @@ function SignUp({ onSwitch }) {
                 message={popupConfig.message}
                 onClose={() => {
                     setPopupConfig({ ...popupConfig, isOpen: false });
-                    if (popupConfig.type === 'success') onSwitch(); // Only go to login if successful
+                    if (popupConfig.type === 'success') onSwitch();
                 }}
             />
         </div>

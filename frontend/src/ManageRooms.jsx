@@ -121,12 +121,9 @@ function ManageRooms({ onGoBack }) {
                                                         }}
                                                 >
                                                     <Edit2 size={14} />
-                                                    Edit
+                                                    Manage Room
                                                 </button>
-                                                <button className="flex items-center gap-1 px-3 py-2 bg-red-50 text-red-600 rounded-lg font-bold text-xs hover:bg-red-600 hover:text-white transition-all shadow-sm">
-                                                    <Trash2 size={14} />
-                                                    Delete
-                                                </button>
+                                                
                                             </div>
                                         </td>
                                     </tr>
@@ -144,6 +141,13 @@ function ManageRooms({ onGoBack }) {
                 onSave={async(id,updatedData) => {
                     await fetchData.UpdateRooms(id,updatedData.name, updatedData.location, updatedData.capacity, updatedData.features)
                     console.log("Saving to Supabase:", updatedData);
+                    setPopUpState(false);
+                    const updatedRoooms = await fetchData.getRooms();
+                    setRooms(updatedRoooms);
+                    setPopUpState()
+                }}
+                onDelete={async(roomID) =>{
+                    await fetchData.deleteRoom(roomID)
                     setPopUpState(false);
                     const updatedRoooms = await fetchData.getRooms();
                     setRooms(updatedRoooms);

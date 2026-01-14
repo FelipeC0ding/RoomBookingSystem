@@ -2,9 +2,10 @@ import { data } from 'autoprefixer';
 import { supabase } from '../supabaseClient';
 export default class FetchDAL{
 
-    static async AddUser (email,password, passwordConfirm ,firstname, surname, role, OrganisationID, departmentID) {
+    static async AddUser (email,password ,firstname, surname, role, OrganisationID, departmentID) {
         console.log("--- Executing Supabase Insert ---");
-        const { data: authData, error: authError } = await supabase.auth.signUp({
+        try{
+            const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: email,
                 password: password,
                 options: {
@@ -16,23 +17,28 @@ export default class FetchDAL{
                     },
                   },
             });
-        const supabaseAuthId = authData.user.id;
-        const { data, error } = await supabase
-            .from('User')
-            .insert([{
-                UserID: supabaseAuthId,
-                UserEmail: email,
-                Firstname: firstname,
-                Surname: surname,
-                Role: 'Teahcer',
-                DepartmentID: departmentID,
-                OrganisationID: OrganisationID
-            }]);
+            const supabaseAuthId = authData.user.id;
+            const { data, error } = await supabase
+                .from('User')
+                .insert([{
+                    UserID: supabaseAuthId,
+                    UserEmail: email,
+                    Firstname: firstname,
+                    Surname: surname,
+                    Role: role,
+                    DepartmentID: departmentID,
+                    OrganisationID: OrganisationID
+                }]);
 
-        if (error) {
-            console.log(error.message)
-            throw error
+            if (error) {
+                console.log(error.message)
+                throw error
 
+            }
+        }
+        catch(error){
+
+            console.log('user creation error',error)
         }
     };
 
@@ -161,6 +167,20 @@ export default class FetchDAL{
         }
 
         return data
+    }
+
+    static async deleteRoom(roomID){
+        try{
+            let id = parseInt(roomID)
+            console.log(roomID)
+            const response = await supabase
+              .from('Room')
+              .delete()
+              .eq('RoomID', id)
+        }
+        catch(error){
+            console.log('deleting room error-',error.message)
+        }
 
     }
 

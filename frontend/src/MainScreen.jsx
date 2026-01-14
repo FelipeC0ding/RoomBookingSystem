@@ -7,6 +7,23 @@ import PopUp from './PopUps/BookRoom.jsx';
 import ProfilePage from './profile.jsx'
 
 function Menu(props) {
+    const [rooms, setRooms] = useState([]);
+
+    useEffect(() => {
+        async function getRoomsToDisplay() {
+            const data = await fetchData.getRooms()
+            setRooms(data)
+        }
+        getRoomsToDisplay()
+    }, [])
+
+
+    let filteredRooms = rooms.filter(room => 
+    room.RoomName.toLowerCase().includes(props.roomFilter.toLowerCase())
+    );
+
+    
+    
     const [popupConfig, setPopupConfig] = useState({
         isOpen: false,
         type: 'success',
@@ -34,9 +51,10 @@ function Menu(props) {
 
     const bookingMap = {};
     bookings.forEach(b => {
-        const key = `${String(b.RoomID)}-${String(b.BookingStartTime.substring(0, 5))}`;
-        bookingMap[key] = b;
+    const key = `${String(b.RoomID)}-${String(b.BookingStartTime.substring(0, 5))}`;
+    bookingMap[key] = b;
     });
+    
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col items-center">
@@ -107,7 +125,7 @@ function Menu(props) {
                     </div>
 
                     {/* Room Columns */}
-                    {props.rooms.map((room) => (
+                    {filteredRooms.map((room) => (
                         <div key={room.RoomID} className="w-64 border-r border-gray-200 last:border-r-0 flex-shrink-0">
                             <div className="h-12 border-b border-gray-200 bg-white flex flex-col items-center justify-center px-4">
                                 <span className="text-xs font-bold text-slate-800 uppercase tracking-tight truncate w-full text-center">{room.RoomName}</span>
@@ -175,16 +193,7 @@ function MainScreen({ onLogout }) {
     const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]);
     const [adminPage, setAdminPage] = useState(false);
     const [profilePage, setProfilePage] = useState(false)
-    const [rooms, setRooms] = useState([]);
     const [timePeriods, setTimePeriods] = useState([])
-
-    useEffect(() => {
-        async function getRoomsToDisplay() {
-            const data = await fetchData.getRooms()
-            setRooms(data)
-        }
-        getRoomsToDisplay()
-    }, [])
 
     useEffect(() => {
         async function timePeriodsHeader() {
@@ -197,9 +206,7 @@ function MainScreen({ onLogout }) {
     if (profilePage) return <ProfilePage onGoBack={() => setProfilePage(false)} />;
     if (adminPage) return <AdminPage onGoBack={() => setAdminPage(false)} />;
 
-    const filteredRooms = rooms.filter(room => 
-        room.RoomName.toLowerCase().includes(roomFilter.toLowerCase())
-    );
+    
 
     return (
         <Menu
@@ -210,7 +217,6 @@ function MainScreen({ onLogout }) {
             handleAdminClick={() => setAdminPage(true)}
             handleLogoutClick={onLogout}
             handleProfilePageClick={() => setProfilePage(true)}
-            rooms={filteredRooms}
             timePeriods={timePeriods}
         />
     );
