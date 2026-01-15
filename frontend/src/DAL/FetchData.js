@@ -168,19 +168,33 @@ export default class FetchDAL{
 
         return data
     }
+    static async AddNewRoom(title, location, capacity, features){
+        
+        try{
+            let capacityFormatted = parseInt(capacity);
+            let orgID = await this.loggedInOrgID();
+            orgID = parseInt(orgID)
+            console.log('adding a new room', title, location, capacityFormatted, features, orgID)
+            const { error } = await supabase
+                .from('Room')
+                .insert({RoomName: title, Capacity: capacityFormatted, IsAvailable:true, Location: location, Features: features, OrganisationID: orgID})
+        }
+        catch(error){
+            console.log(error.message)
+        }
+    }
 
     static async deleteRoom(roomID){
-        try{
+            console.log('toomid for delte',roomID)
             let id = parseInt(roomID)
-            console.log(roomID)
-            const response = await supabase
+            const {error} = await supabase
               .from('Room')
               .delete()
               .eq('RoomID', id)
-        }
-        catch(error){
-            console.log('deleting room error-',error.message)
-        }
+            if (error) {
+            console.log(error.message, error.code)
+            
+            }
 
     }
 

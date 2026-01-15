@@ -11,13 +11,14 @@ import {
 } from 'lucide-react';
 import fetchData from './DAL/FetchData'
 import EditRoom from './PopUps/editRoom'
+import AddRoom from './PopUps/AddRoom'
 
 function ManageRooms({ onGoBack }) {
     const [searchTerm, setSearchTerm] = useState("");
     const [popUpOpen, setPopUpState] = useState(false)
     const [selectedRoom, setSelectedRoom] = useState(null)
     const [rooms, setRooms] = useState([]);
-
+    const [addNewRoomState, setAddRoom] = useState(false)
     useEffect(()=>{
         async function getALlRooms(){
             const data = await fetchData.getRooms();
@@ -68,7 +69,9 @@ function ManageRooms({ onGoBack }) {
                     </div>
 
                     <div className="flex w-full md:w-auto gap-3">
-                        <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-black hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-200">
+                        <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-black hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-200"
+                            onClick={()=>setAddRoom(true)}
+                        >
                             <Plus size={22} strokeWidth={3} />
                             Add New Room
                         </button>
@@ -152,6 +155,19 @@ function ManageRooms({ onGoBack }) {
                     const updatedRoooms = await fetchData.getRooms();
                     setRooms(updatedRoooms);
                     setPopUpState()
+                }}
+            />
+
+            <AddRoom 
+                isOpen={addNewRoomState} 
+                onClose={() => setAddRoom(false)} 
+                onAdd={async(title, location, capacity, features) => {
+                    await fetchData.AddNewRoom(title, location, capacity, features)
+                    console.log("Saving new room to Supabase:",);
+                    setAddRoom(false);
+                    const updatedRoooms = await fetchData.getRooms();
+                    setRooms(updatedRoooms);
+                    setAddRoom()
                 }}
             />
         </div>
