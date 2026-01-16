@@ -42,6 +42,30 @@ export default class FetchDAL{
         }
     };
 
+    static async getAllUsers(){
+        const { data, error } = await supabase
+            .from('User')
+            .select(`*`);
+
+        if (error) throw error;
+        console.log('All Users',data)
+        return data;
+    }
+
+    static async makeAdmin(userID){
+        console.log('UserID to be admin', userID)
+        try{
+            const { error } = await supabase
+              .from('User')
+              .update({ 'Role': 'admin'})
+              .eq('UserID', userID)
+        }
+        catch(error){
+            console.log(error.message)
+        }
+
+    }
+
     static async getUserData(){
         const { data: { user } } = await supabase.auth.getUser();
         console.log(data)

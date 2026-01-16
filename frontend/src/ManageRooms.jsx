@@ -19,6 +19,7 @@ function ManageRooms({ onGoBack }) {
     const [selectedRoom, setSelectedRoom] = useState(null)
     const [rooms, setRooms] = useState([]);
     const [addNewRoomState, setAddRoom] = useState(false)
+    
     useEffect(()=>{
         async function getALlRooms(){
             const data = await fetchData.getRooms();
