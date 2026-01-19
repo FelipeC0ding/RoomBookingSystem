@@ -1,5 +1,5 @@
 import React,{ useState } from 'react';
-import { CheckCircle2, AlertCircle, X, BookOpen, AlignLeft } from 'lucide-react';
+import { Repeat,Minus, Plus,CheckCircle2, AlertCircle, X, BookOpen, AlignLeft } from 'lucide-react';
 import fetchData from '../DAL/FetchData'
 const INPUT_STYLE = `
   w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200
@@ -16,6 +16,10 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
   const isSuccess = type === 'success';
   const [description, setDescription] = useState('')
   const [bookingTitle, setTitle] = useState('')
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [frequency, setFrequency] = useState('')
+  const [recurrenceLength, setRecurrenceLength] = useState(4); 
+  const [monthlyType, setMonthlyType] = useState('date'); 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
@@ -68,6 +72,116 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
+          </div>
+
+          {/* Recurring Toggle Section */}
+          <div className="space-y-4">
+            <button 
+              onClick={() => setIsRecurring(!isRecurring)}
+              className={`w-full p-4 rounded-3xl border-2 transition-all flex items-center justify-between group
+                ${isRecurring ? 'border-blue-600 bg-blue-50/40' : 'border-slate-100 bg-white hover:border-slate-200'}`}
+            >
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-2xl transition-all shadow-sm ${isRecurring ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                  <Repeat size={18} />
+                </div>
+                <div className="text-left">
+                  <p className="font-black text-slate-900 uppercase text-[10px] tracking-tight">Recurring Booking</p>
+                  <p className="text-[10px] text-slate-400 font-medium">Create a series</p>
+                </div>
+              </div>
+              <div className={`h-6 w-10 rounded-full relative transition-all ${isRecurring ? 'bg-blue-600' : 'bg-slate-200'}`}>
+                <div className={`absolute top-1 bg-white h-4 w-4 rounded-full shadow-sm transition-all ${isRecurring ? 'left-5' : 'left-1'}`} />
+              </div>
+            </button>
+
+            {isRecurring && (
+              <div className="space-y-5 p-7 bg-slate-50 rounded-[2rem] border border-slate-200 animate-in slide-in-from-top-4 duration-500">
+                
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Repeat Pattern</label>
+                  <div className="grid grid-cols-3 gap-2 bg-white p-1.5 rounded-2xl border border-slate-100">
+                    {['Weekly', 'Bi-Weekly', 'Monthly'].map((freq) => (
+                      <button
+                        key={freq}
+                        onClick={() => setFrequency(freq)}
+                        className={`py-2 rounded-xxl font-bold text-[9px] transition-all
+                          ${frequency === freq ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
+                      >
+                        {freq.replace('-', ' ')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Monthly Selection */}
+          {frequency === 'Monthly' && (
+            <div className="space-y-2">
+              <button 
+                onClick={() => setMonthlyType('fixed')}
+                className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all
+                  ${monthlyType === 'fixed' ? 'border-blue-600 bg-blue-50/50' : 'border-slate-100 hover:bg-slate-50'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${monthlyType === 'fixed' ? 'border-blue-600' : 'border-slate-300'}`}>
+                    {monthlyType === 'fixed' && <div className="w-2 h-2 rounded-full bg-blue-600" />}
+                  </div>
+                  <span className="text-sm font-medium">Monthly on day {bookingDate}</span>
+                </div>
+              </button>
+
+              <div className={`rounded-xl border transition-all ${monthlyType === 'ordinal' ? 'border-blue-600 bg-blue-50/50' : 'border-slate-100'}`}>
+                <button 
+                  onClick={() => setMonthlyType('ordinal')}
+                  className="w-full flex items-center gap-3 p-3 text-left"
+                >
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${monthlyType === 'ordinal' ? 'border-blue-600' : 'border-slate-300'}`}>
+                    {monthlyType === 'ordinal' && <div className="w-2 h-2 rounded-full bg-blue-600" />}
+                  </div>
+                  <span className="text-sm font-medium">On the relative day...</span>
+                </button>
+                
+                {monthlyType === 'ordinal' && (
+                  <div className="px-3 pb-3 flex gap-2 animate-in fade-in duration-200">
+                    <div className="flex-1 relative">
+                      <select 
+                        value={monthlyOrdinal} 
+                        onChange={(e) => setMonthlyOrdinal(e.target.value)}
+                        className="w-full appearance-none bg-white border border-blue-200 rounded-lg p-2 pr-8 text-xs font-bold text-blue-700 outline-none"
+                      >
+                        {ordinals.map(o => <option key={o} value={o}>{o.toUpperCase()}</option>)}
+                      </select>
+                      <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-400 pointer-events-none" />
+                    </div>
+                    <div className="flex-[1.5] relative">
+                      <select 
+                        value={monthlyWeekday} 
+                        onChange={(e) => setMonthlyWeekday(e.target.value)}
+                        className="w-full appearance-none bg-white border border-blue-200 rounded-lg p-2 pr-8 text-xs font-bold text-blue-700 outline-none"
+                      >
+                        {weekdays.map(d => <option key={d} value={d}>{d}</option>)}
+                      </select>
+                      <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-400 pointer-events-none" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Occurrences</label>
+                  <div className="flex items-center gap-4 bg-white p-2 rounded-2xl border border-slate-100">
+                    <input 
+                      type="number"
+                      value={recurrenceLength}
+                      onChange={(e) => setRecurrenceLength(e.target.value)}
+                      className="flex-1 text-center font-black text-base text-slate-800 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

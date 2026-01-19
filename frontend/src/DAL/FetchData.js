@@ -13,7 +13,6 @@ export default class FetchDAL{
                       organisation_id: OrganisationID,
                       Firstname:firstname,
                       Surname:surname,
-                      Role: role 
                     },
                   },
             });
@@ -42,6 +41,19 @@ export default class FetchDAL{
         }
     };
 
+    static async deleteUser(userID){
+        console.log('toomid for delte',roomID)
+        let id = parseInt(roomID)
+        const {error} = await supabase
+            .from('Room')
+            .delete()
+            .eq('RoomID', id)
+        if (error) {
+        console.log(error.message, error.code)
+        
+        }
+    }
+
     static async getAllUsers(){
         const { data, error } = await supabase
             .from('User')
@@ -50,6 +62,24 @@ export default class FetchDAL{
         if (error) throw error;
         console.log('All Users',data)
         return data;
+    }
+    static async getCurrentUser(){
+        let user = await this.getUserData();
+        let uid = user.id
+        console.log('ID -', uid);
+        const{data, error} = await supabase
+            .from('User')
+            .select('*')
+            .eq('UserID', uid)
+            .single()
+
+        if (error) {
+            throw error
+        } else {
+            console.log('SUCCESS: USER', data);
+        }
+
+        return data
     }
 
     static async makeAdmin(userID){
@@ -65,11 +95,31 @@ export default class FetchDAL{
         }
 
     }
+    static async removeAdmin(userID){
+        console.log('UserID to have admin revoked', userID)
+        try{
+            const { error } = await supabase
+              .from('User')
+              .update({ 'Role': 'standard'})
+              .eq('UserID', userID)
+        }
+        catch(error){
+            console.log(error.message)
+        }
+
+    }
 
     static async getUserData(){
-        const { data: { user } } = await supabase.auth.getUser();
-        console.log(data)
-        return user
+        const { data, error } = await supabase.auth.getUser();
+        if(error){
+            console.log(error.message)
+            return null
+        }
+        else{
+            console.log('Current user',data.user)
+            return data.user
+        }
+
     }
     static async createBooking(description, roomID, bookingDate,duration, title){
         try{

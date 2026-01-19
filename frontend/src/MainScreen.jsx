@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Settings, LogOut, Filter, Calendar, CheckCircle2 } from 'lucide-react';
+import { User, ShieldAlert,Settings, LogOut, Filter, Calendar, CheckCircle2 } from 'lucide-react';
 import AdminPage from './Admin.jsx';
 import fetchData from './DAL/FetchData.js'
 import timeCalcs from './calculations/TimeCalcs.js'
@@ -8,22 +8,22 @@ import ProfilePage from './profile.jsx'
 
 function Menu(props) {
     const [rooms, setRooms] = useState([]);
+    const [selectedRoomForWeek, setSelectedRoomForWeek] = useState(null);
 
     useEffect(() => {
         async function getRoomsToDisplay() {
             const data = await fetchData.getRooms()
             setRooms(data)
+            // Default the week selector to the first room
+            if (data.length > 0) setSelectedRoomForWeek(data[0].RoomID);
         }
         getRoomsToDisplay()
     }, [])
 
-
     let filteredRooms = rooms.filter(room => 
-    room.RoomName.toLowerCase().includes(props.roomFilter.toLowerCase())
+        room.RoomName.toLowerCase().includes(props.roomFilter.toLowerCase())
     );
 
-    
-    
     const [popupConfig, setPopupConfig] = useState({
         isOpen: false,
         type: 'success',
@@ -38,7 +38,7 @@ function Menu(props) {
     const loadData = async () => {
         setIsLoading(true);
         try {
-            const data = await fetchData.fetchBookings(props.viewDate);
+            const data = await fetchData.fetchBookings(props.viewDate, props.viewType);
             setBookings(data);
         } finally {
             setIsLoading(false);
@@ -47,14 +47,19 @@ function Menu(props) {
 
     useEffect(() => {
         loadData();
-    }, [props.viewDate]);
+    }, [props.viewDate, props.viewType]);
 
     const bookingMap = {};
     bookings.forEach(b => {
-    const key = `${String(b.RoomID)}-${String(b.BookingStartTime.substring(0, 5))}`;
-    bookingMap[key] = b;
+        const key = `${String(b.RoomID)}-${b.BookingDate}-${String(b.BookingStartTime.substring(0, 5))}`;
+        bookingMap[key] = b;
     });
-    
+
+    const weekDays = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(props.viewDate);
+        d.setDate(d.getDate() + i);
+        return d.toISOString().split('T')[0];
+    });
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col items-center">
@@ -99,6 +104,32 @@ function Menu(props) {
                             className="bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
                         />
                     </div>
+
+                    {/* Day/Week Selector */}
+                    <select 
+                        value={props.viewType}
+                        onChange={(e) => props.setViewType(e.target.value)}
+                        className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-slate-600 outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+                    >
+                        <option value="day">Day</option>
+                        <option value="week">Week</option>
+                    </select>
+
+                    {/* NEW: Room selector appears beside Day/Week picker ONLY when week is selected */}
+                    {props.viewType === 'week' && (
+                        <select 
+                            value={selectedRoomForWeek} 
+                            onChange={(e) => setSelectedRoomForWeek(parseInt(e.target.value))}
+                            className="bg-blue-50 border border-blue-100 text-blue-600 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer animate-in fade-in slide-in-from-left-2 duration-200"
+                        >
+                            {rooms.map(r => (
+                                <option key={r.RoomID} value={r.RoomID}>
+                                    Viewing: {r.RoomName}
+                                </option>
+                            ))}
+                        </select>
+                    )}
+
                     <div className="flex-1" />
                     <div className="flex gap-2">
                         <button onClick={props.handleAdminClick} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"><Settings size={20}/></button>
@@ -108,11 +139,9 @@ function Menu(props) {
                 </div>
             </div>
 
-            {/* 3. The Joined, Centered Grid */}
+            {/* 3. Grid Logic */}
             <div className="w-full flex-1 overflow-auto p-6 flex justify-center">
                 <div className="inline-flex bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden h-fit">
-                    
-                    {/* Time Column */}
                     <div className="w-24 bg-gray-50/50 border-r border-gray-200 flex-shrink-0">
                         <div className="h-12 border-b border-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50">
                             Time
@@ -124,50 +153,57 @@ function Menu(props) {
                         ))}
                     </div>
 
-                    {/* Room Columns */}
-                    {filteredRooms.map((room) => (
-                        <div key={room.RoomID} className="w-64 border-r border-gray-200 last:border-r-0 flex-shrink-0">
-                            <div className="h-12 border-b border-gray-200 bg-white flex flex-col items-center justify-center px-4">
-                                <span className="text-xs font-bold text-slate-800 uppercase tracking-tight truncate w-full text-center">{room.RoomName}</span>
-                                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">{room.Capacity} Seats</span>
-                            </div>
+                    {(props.viewType === 'day' ? filteredRooms : weekDays).map((item, colIdx) => {
+                        const isDay = props.viewType === 'day';
+                        const currentRoomID = isDay ? item.RoomID : selectedRoomForWeek;
+                        const currentDate = isDay ? props.viewDate : item;
 
-                            {props.timePeriods.map((range, idx) => {
-                                const formattedRange = range.substring(0, 5);
-                                const currentBooking = bookingMap[`${String(room.RoomID)}-${String(formattedRange)}`];
-                                
-                                return (
-                                    <div key={idx} className="h-20 border-b border-gray-50 p-2 flex items-center justify-center">
-                                        {currentBooking ? (
-                                            <div className="w-full h-full bg-slate-800 rounded-lg p-2.5 text-white shadow-sm flex flex-col justify-center border-l-4 border-blue-500 overflow-hidden">
-                                                <div className="flex items-center gap-1.5 mb-0.5">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                                                    <span className="text-[10px] font-bold uppercase truncate">{currentBooking.Title}</span>
+                        return (
+                            <div key={colIdx} className="w-64 border-r border-gray-200 last:border-r-0 flex-shrink-0">
+                                <div className="h-12 border-b border-gray-200 bg-white flex flex-col items-center justify-center px-4">
+                                    <span className="text-xs font-bold text-slate-800 uppercase tracking-tight truncate w-full text-center">
+                                        {isDay ? item.RoomName : new Date(item).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}
+                                    </span>
+                                    {isDay && <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">{item.Capacity} Seats</span>}
+                                </div>
+
+                                {props.timePeriods.map((range, idx) => {
+                                    const formattedRange = range.substring(0, 5);
+                                    const currentBooking = bookingMap[`${String(currentRoomID)}-${currentDate}-${String(formattedRange)}`];
+                                    
+                                    return (
+                                        <div key={idx} className="h-20 border-b border-gray-50 p-2 flex items-center justify-center">
+                                            {currentBooking ? (
+                                                <div className="w-full h-full bg-slate-800 rounded-lg p-2.5 text-white shadow-sm flex flex-col justify-center border-l-4 border-blue-500 overflow-hidden">
+                                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                                                        <span className="text-[10px] font-bold uppercase truncate">{currentBooking.Title}</span>
+                                                    </div>
+                                                    <span className="text-[14px] opacity-60 font-medium truncate ml-3">
+                                                        {currentBooking.User.Firstname} {currentBooking.User.Surname}
+                                                    </span>
                                                 </div>
-                                                <span className="text-[14px] opacity-60 font-medium truncate ml-3">
-                                                    {currentBooking.User.Firstname} {currentBooking.User.Surname}
-                                                </span>
-                                            </div>
-                                        ) : (
-                                            <button 
-                                                onClick={() => setPopupConfig({
-                                                    isOpen: true,
-                                                    type: 'success',
-                                                    title: 'Make a booking',
-                                                    message: `Booking ${room.RoomName}`,
-                                                    roomID: room.RoomID,
-                                                    timeDuration: `${range} - ${props.timePeriods[idx + 1] || 'End'}`
-                                                })}
-                                                className="text-[10px] font-bold text-emerald-500 tracking-tight hover:scale-105 transition-transform"
-                                            >
-                                                + Available
-                                            </button>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ))}
+                                            ) : (
+                                                <button 
+                                                    onClick={() => setPopupConfig({
+                                                        isOpen: true,
+                                                        type: 'success',
+                                                        title: 'Make a booking',
+                                                        message: `Booking for ${currentDate}`,
+                                                        roomID: currentRoomID,
+                                                        timeDuration: `${range}`
+                                                    })}
+                                                    className="text-[10px] font-bold text-emerald-500 tracking-tight hover:scale-105 transition-transform"
+                                                >
+                                                    + Available
+                                                </button>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
 
@@ -191,9 +227,11 @@ function Menu(props) {
 function MainScreen({ onLogout }) {
     const [roomFilter, setRoomFilter] = useState('');
     const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]);
+    const [viewType, setViewType] = useState('day'); 
     const [adminPage, setAdminPage] = useState(false);
     const [profilePage, setProfilePage] = useState(false)
     const [timePeriods, setTimePeriods] = useState([])
+    const [userRole, setUserRole] = useState('')
 
     useEffect(() => {
         async function timePeriodsHeader() {
@@ -203,10 +241,23 @@ function MainScreen({ onLogout }) {
         timePeriodsHeader()
     }, [])
 
-    if (profilePage) return <ProfilePage onGoBack={() => setProfilePage(false)} />;
-    if (adminPage) return <AdminPage onGoBack={() => setAdminPage(false)} />;
+    useEffect(() => {
+        async function checkUserRole() {
+            let data = (await fetchData.getCurrentUser());
+            if (data) setUserRole(data.Role.toUpperCase())
+        }
+        checkUserRole()
+    }, [])
 
-    
+    useEffect(() => {
+        if (adminPage && userRole !== 'ADMIN') {
+            alert("Security: You do not have permission to access admin page.");
+            setAdminPage(false);
+        }
+    }, [adminPage, userRole]);
+
+    if (profilePage) return <ProfilePage onGoBack={() => setProfilePage(false)} />;
+    if (adminPage && userRole === 'ADMIN') return <AdminPage onGoBack={() => setAdminPage(false)} />;
 
     return (
         <Menu
@@ -214,6 +265,8 @@ function MainScreen({ onLogout }) {
             setRoomFilter={setRoomFilter}
             viewDate={viewDate}
             setViewDate={setViewDate}
+            viewType={viewType}
+            setViewType={setViewType}
             handleAdminClick={() => setAdminPage(true)}
             handleLogoutClick={onLogout}
             handleProfilePageClick={() => setProfilePage(true)}
