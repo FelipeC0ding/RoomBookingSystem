@@ -1,5 +1,5 @@
-import React,{ useState } from 'react';
-import { Repeat,Minus, Plus,CheckCircle2, AlertCircle, X, BookOpen, AlignLeft } from 'lucide-react';
+import React,{ useState, useEffect } from 'react';
+import { ChevronDown ,Repeat,Minus, Plus,CheckCircle2, AlertCircle, X, BookOpen, AlignLeft } from 'lucide-react';
 import fetchData from '../DAL/FetchData'
 const INPUT_STYLE = `
   w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200
@@ -20,7 +20,18 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
   const [frequency, setFrequency] = useState('')
   const [recurrenceLength, setRecurrenceLength] = useState(4); 
   const [monthlyType, setMonthlyType] = useState('date'); 
+  const [monthlyOrdinal, setMonthlyOrdinal] = useState('1st');
+  const [monthlyWeekday ,setMonthlyWeekday] = useState('Monday')
+  const ordinals = ["1st", "2nd", "3rd", "4th", "last"];
+  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
+  useEffect(() => {
+    const dayName = weekdays[new Date(bookingDate).getDay()];
+    const weekNum = Math.ceil(new Date(bookingDate).getDate() / 7);
+
+    setMonthlyWeekday(dayName);
+    setMonthlyOrdinal(weekNum > 4 ? "last" : ordinals[weekNum - 1]);
+  }, [bookingDate]);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
       <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl transform animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 border border-white/20">
@@ -101,7 +112,7 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
                 <div className="space-y-3">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Repeat Pattern</label>
                   <div className="grid grid-cols-3 gap-2 bg-white p-1.5 rounded-2xl border border-slate-100">
-                    {['Weekly', 'Bi-Weekly', 'Monthly'].map((freq) => (
+                    {['Daily', 'Weekly', 'Monthly'].map((freq) => (
                       <button
                         key={freq}
                         onClick={() => setFrequency(freq)}
@@ -144,8 +155,8 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
                 {monthlyType === 'ordinal' && (
                   <div className="px-3 pb-3 flex gap-2 animate-in fade-in duration-200">
                     <div className="flex-1 relative">
-                      <select 
-                        value={monthlyOrdinal} 
+                      <select
+                        value={monthlyOrdinal}
                         onChange={(e) => setMonthlyOrdinal(e.target.value)}
                         className="w-full appearance-none bg-white border border-blue-200 rounded-lg p-2 pr-8 text-xs font-bold text-blue-700 outline-none"
                       >
@@ -154,8 +165,8 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
                       <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-400 pointer-events-none" />
                     </div>
                     <div className="flex-[1.5] relative">
-                      <select 
-                        value={monthlyWeekday} 
+                      <select
+                        value={monthlyWeekday}
                         onChange={(e) => setMonthlyWeekday(e.target.value)}
                         className="w-full appearance-none bg-white border border-blue-200 rounded-lg p-2 pr-8 text-xs font-bold text-blue-700 outline-none"
                       >
