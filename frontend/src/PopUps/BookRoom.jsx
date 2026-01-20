@@ -23,7 +23,7 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
   const [monthlyOrdinal, setMonthlyOrdinal] = useState('1st');
   const [monthlyWeekday ,setMonthlyWeekday] = useState('Monday')
   const ordinals = ["1st", "2nd", "3rd", "4th", "last"];
-  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const weekdays = {0:'Sunday', 1:'Monday', 2:'Tuesday', 3:'Wednesday', 4:'Thursday', 5:'Friday', 6:'Saturday'};
 
   useEffect(() => {
     const dayName = weekdays[new Date(bookingDate).getDay()];
@@ -137,7 +137,7 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
                   <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${monthlyType === 'fixed' ? 'border-blue-600' : 'border-slate-300'}`}>
                     {monthlyType === 'fixed' && <div className="w-2 h-2 rounded-full bg-blue-600" />}
                   </div>
-                  <span className="text-sm font-medium">Monthly on day {bookingDate}</span>
+                  <span className="text-sm font-medium">Monthly Date: {new Date(bookingDate).getDay()}</span>
                 </div>
               </button>
 
@@ -149,7 +149,7 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
                   <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${monthlyType === 'ordinal' ? 'border-blue-600' : 'border-slate-300'}`}>
                     {monthlyType === 'ordinal' && <div className="w-2 h-2 rounded-full bg-blue-600" />}
                   </div>
-                  <span className="text-sm font-medium">On the relative day...</span>
+                  <span className="text-sm font-medium">Every month on the:</span>
                 </button>
                 
                 {monthlyType === 'ordinal' && (
@@ -170,7 +170,9 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
                         onChange={(e) => setMonthlyWeekday(e.target.value)}
                         className="w-full appearance-none bg-white border border-blue-200 rounded-lg p-2 pr-8 text-xs font-bold text-blue-700 outline-none"
                       >
-                        {weekdays.map(d => <option key={d} value={d}>{d}</option>)}
+                        {Object.entries(weekdays).map(([key, value]) => (
+                          <option key={key} value={key}>{value}</option>
+                        ))}
                       </select>
                       <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-400 pointer-events-none" />
                     </div>
@@ -199,7 +201,21 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
         {/* Actions */}
         <div className="space-y-3">
           <button
-            onClick={async ()=> {await fetchData.createBooking(description, roomID, bookingDate, timeDuration, bookingTitle); onClose();}}
+            onClick={async ()=> 
+              {
+                if(isRecurring){
+                  if(frequency === 'Monthly' && monthlyType === 'ordinal'){
+                    await fetchData.createRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength, monthlyOrdinal, monthlyWeekday);
+                  }
+                  else{
+                    await fetchData.createRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength);
+                  }
+              }
+              else{
+                await fetchData.createBooking(description, roomID, bookingDate, timeDuration, bookingTitle);
+              }
+                onClose();
+            }}
             className={`w-full py-4 px-6 font-bold rounded-2xl transition-all shadow-lg shadow-blue-200 active:scale-[0.98] ${
               isSuccess ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700'
             } text-white text-lg`}

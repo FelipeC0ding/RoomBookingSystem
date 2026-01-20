@@ -121,6 +121,48 @@ export default class FetchDAL{
         }
 
     }
+    static async createRecurringBooking(description, roomID, bookingDate,duration, title, frequency,recurrenceLength){
+        try{
+            let spacing = 0
+            if(frequency === 'daily'){
+                spacing = 1
+            }
+            if(frequency === 'weekly'){
+                spacing = 7
+            }
+            let increase = 0;
+            let user = await this.getUserData();
+            let userID = user.id;
+            const date = new Date();
+            const dateBooked = date.toISOString().split('T')[0];
+            const timings = duration.split(" - ")
+            console.log(userID)
+            console.log(timings)
+            console.log("--- Executing booking Insert for recurrance ---");
+            for(let index = 0; index<recurrenceLength; index++){
+                var date = new Date(bookingDate);
+                date.setDate(date.getDate() + parseInt(spacing*index));
+                const { error } = await supabase
+                    .from('Booking')
+                    .insert({
+                    Description: description,
+                    RoomID: roomID,
+                    UserID: userID,
+                    BookingDate: date,
+                    BookingStartTime: timings[0],
+                    BookingEndTime: timings[1],
+                    CreatedTimeStamp: dateBooked,
+                    Title: title
+                    })
+            }
+                
+        }
+        catch(error){
+            console.log(error.message)
+        }
+    }
+    /data/home/philip/Downloads/starting_points_eu-starting-point-1-dhcp.ovpn
+
     static async createBooking(description, roomID, bookingDate,duration, title){
         try{
             let user = await this.getUserData();
