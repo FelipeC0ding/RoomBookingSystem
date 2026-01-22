@@ -121,47 +121,120 @@ export default class FetchDAL{
         }
 
     }
-    static async createRecurringBooking(description, roomID, bookingDate,duration, title, frequency,recurrenceLength){
-        try{
-            let spacing = 0
-            if(frequency === 'daily'){
-                spacing = 1
+    static isWeekend(date){
+        if(date.getDay() === 6 || date.getDay() === 0){
+            return true
+        }
+    }
+    static async createDailyBooking(userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked) {
+        const timings = duration.split(" - ");
+        let date = new Date(bookingDate);
+
+        console.log('DAILY DATA:',userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked)
+        for (let index = 0; index < recurrenceLength; index++) {
+            
+            // 1. If we land on a weekend, jump to Monday
+            if (this.isWeekend(date)) {
+                let jump = (date.getDay() === 6 || date.getDay() === 0) ? 2 : 1;
+                date.setDate(date.getDate() + jump);
             }
-            if(frequency === 'weekly'){
-                spacing = 7
-            }
-            let increase = 0;
-            let user = await this.getUserData();
-            let userID = user.id;
-            const date = new Date();
-            const dateBooked = date.toISOString().split('T')[0];
-            const timings = duration.split(" - ")
-            console.log(userID)
-            console.log(timings)
-            console.log("--- Executing booking Insert for recurrance ---");
-            for(let index = 0; index<recurrenceLength; index++){
-                var date = new Date(bookingDate);
-                date.setDate(date.getDate() + parseInt(spacing*index));
-                const { error } = await supabase
-                    .from('Booking')
-                    .insert({
+
+            // 2. Insert the date exactly as it is now
+            const { error } = await supabase
+                .from('Booking')
+                .insert({
                     Description: description,
                     RoomID: roomID,
                     UserID: userID,
-                    BookingDate: date,
+                    BookingDate: date.toISOString().split('T')[0], 
                     BookingStartTime: timings[0],
                     BookingEndTime: timings[1],
                     CreatedTimeStamp: dateBooked,
                     Title: title
-                    })
-            }
+                });
                 
-        }
-        catch(error){
-            console.log(error.message)
+            if (error) throw error;
+
+            // 3. CRITICAL: Step forward by 1 day to prepare for the next loop
+            // This replaces the "spacing * index" logic
+            date.setDate(date.getDate() + 1);
         }
     }
-    /data/home/philip/Downloads/starting_points_eu-starting-point-1-dhcp.ovpn
+
+    static async createRecurringBooking(description, roomID, bookingDate,duration, title, frequency,recurrenceLength){
+        try {
+            let user = await this.getUserData();
+            let userID = user.id;
+            const dateBooked = new Date().toISOString().split('T')[0];
+            const freq = frequency.toLowerCase();
+            let spacing = 1; 
+            
+            if (freq === 'daily') {
+                spacing = 1;
+                console.log('Processing Daily');
+                this.createDailyBooking(userID,description, roomID, bookingDate,duration, title,recurrenceLength,dateBooked);
+            } 
+            else if (freq === 'weekly') 
+            {
+                spacing = 7;
+                console.log('Processing Weekly');
+                
+                const timings = duration.split(" - ");
+                let currentBookings = await this.fetchAllBookings();
+                let spaceFree = true;
+
+                console.log("--- Executing booking Insert for recurrence ---");
+                for (let index = 0; index < recurrenceLength; index++) {
+                    let date = new Date(bookingDate);
+                    date.setDate(date.getDate() + (spacing * index));
+
+                    for(let i =0; i < (currentBookings).length; i++){
+                        let currentDate = currentBookings[i].BookingDate
+                        let newbookingDate = date.toISOString().split('T')[0]
+                        let RoomID = parseInt(currentBookings[i].RoomID)
+                        roomID = parseInt(roomID)
+                        let currentTime = currentBookings[i].BookingStartTime.substring(0, 5); 
+                        if(currentDate === newbookingDate && RoomID === roomID && currentTime === timings[0]){
+                            console.log("Slot has been booked on", newbookingDate)
+                            spaceFree = false;
+                            break;
+                        }
+                    }
+                    if(!spaceFree) break;
+                    
+                    
+                }
+                if(spaceFree)
+                {
+                    for (let index = 0; index < recurrenceLength; index++) 
+                    {
+                        let date = new Date(bookingDate);
+                        date.setDate(date.getDate() + (spacing * index));
+                            const { error } = await supabase
+                            .from('Booking')
+                            .insert({
+                                Description: description,
+                                RoomID: roomID,
+                                UserID: userID,
+                                BookingDate: date.toISOString().split('T')[0], 
+                                BookingStartTime: timings[0],
+                                BookingEndTime: timings[1],
+                                CreatedTimeStamp: dateBooked,
+                                Title: title
+                            });
+                            
+                        if (error) throw error; 
+                    }
+                }
+                console.log(await this.fetchUserBookings());
+                
+            } 
+        }   
+        catch (error) {
+            console.error("Recurrence Error:", error.message);
+        }         
+            
+    }
 
     static async createBooking(description, roomID, bookingDate,duration, title){
         try{
@@ -236,6 +309,22 @@ export default class FetchDAL{
         console.log('Bookings',data)
         return data
 
+        }
+        catch(error){
+            console.log(error.message)
+        }
+    }
+
+    static async fetchAllBookings(){
+        try{
+        const { data, error } = await supabase
+            .from('Booking')
+            .select(`
+                *`
+            )
+
+        console.log('Bookings',data)
+        return data
         }
         catch(error){
             console.log(error.message)
