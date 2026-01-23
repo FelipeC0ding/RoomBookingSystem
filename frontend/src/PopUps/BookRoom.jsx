@@ -137,7 +137,7 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
                   <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${monthlyType === 'fixed' ? 'border-blue-600' : 'border-slate-300'}`}>
                     {monthlyType === 'fixed' && <div className="w-2 h-2 rounded-full bg-blue-600" />}
                   </div>
-                  <span className="text-sm font-medium">Monthly Date: {new Date(bookingDate).getDay()}</span>
+                  <span className="text-sm font-medium">Monthly Date: {new Date(bookingDate).getDate()}</span>
                 </div>
               </button>
 
@@ -205,7 +205,10 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
               {
                 if(isRecurring){
                   if(frequency === 'Monthly' && monthlyType === 'ordinal'){
-                    await fetchData.createRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength, monthlyOrdinal, monthlyWeekday);
+                    await fetchData.createMonthlyRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength, monthlyOrdinal, monthlyWeekday);
+                  }
+                  else if(frequency === 'Monthly' && monthlyType === 'fixed'){
+                      await fetchData.createMonthlyRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength, monthlyOrdinal, monthlyWeekday,monthlyType);
                   }
                   else{
                     await fetchData.createRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength);

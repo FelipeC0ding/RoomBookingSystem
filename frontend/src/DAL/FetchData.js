@@ -133,13 +133,11 @@ export default class FetchDAL{
         console.log('DAILY DATA:',userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked)
         for (let index = 0; index < recurrenceLength; index++) {
             
-            // 1. If we land on a weekend, jump to Monday
             if (this.isWeekend(date)) {
                 let jump = (date.getDay() === 6 || date.getDay() === 0) ? 2 : 1;
                 date.setDate(date.getDate() + jump);
             }
 
-            // 2. Insert the date exactly as it is now
             const { error } = await supabase
                 .from('Booking')
                 .insert({
@@ -155,11 +153,93 @@ export default class FetchDAL{
                 
             if (error) throw error;
 
-            // 3. CRITICAL: Step forward by 1 day to prepare for the next loop
-            // This replaces the "spacing * index" logic
             date.setDate(date.getDate() + 1);
         }
     }
+    static async createMonthlyRecurringBooking(description, roomID, bookingDate,duration, title, frequency,recurrenceLength, monthlyOrdinal, monthlyWeekday,monthlyType){
+        const timings = duration.split(" - ");
+        let date = new Date(bookingDate);
+        const ordinal = monthlyOrdinal.toLowerCase();
+        let user = await this.getUserData();
+        let userID = user.id;
+        const dateBooked = new Date().toISOString().split('T')[0];
+
+        console.log('Monthly fixed DATA:',userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked)
+
+        if(monthlyType.toLowerCase() === 'fixed'){
+            for (let index = 0; index < recurrenceLength; index++) {
+                const { error } = await supabase
+                    .from('Booking')
+                    .insert({
+                        Description: description,
+                        RoomID: roomID,
+                        UserID: userID,
+                        BookingDate: date.toISOString().split('T')[0], 
+                        BookingStartTime: timings[0],
+                        BookingEndTime: timings[1],
+                        CreatedTimeStamp: dateBooked,
+                        Title: title
+                    });
+                    
+                if (error) throw error;
+                console.log(date);
+                date.setMonth(date.getMonth() + 1);
+            }
+        }
+        else if(monthlyType.toLowerCase() === 'ordinal'){
+            let bookingDates = this.createSpecificWeekdayBookings()
+            
+            for(let index = 0; index < 1; index++){
+                const { error } = await supabase
+                    .from('Booking')
+                    .insert({
+                        Description: description,
+                        RoomID: roomID,
+                        UserID: userID,
+                        BookingDate: bookingDates[index].toISOString().split('T')[0], 
+                        BookingStartTime: timings[0],
+                        BookingEndTime: timings[1],
+                        CreatedTimeStamp: dateBooked,
+                        Title: title
+                    });
+                    
+                if (error) throw error;
+            }
+        }
+    }
+
+    static createSpecificWeekdayBookings(userID, roomID, bookingDate, duration, title, targetDay, targetOrdinal, recurrenceLength) {
+    let date = new Date(bookingDate);
+    date.setDate(1); 
+    
+    let bookingsCreated = 0;
+    let results = [];
+
+    while (bookingsCreated < recurrenceLength) {
+        let occurrenceCounter = 0;
+        let monthFinished = false;
+        let currentMonth = date.getMonth();
+
+        while (!monthFinished) {
+            if (date.getDay() === targetDay) {
+                occurrenceCounter++;
+                if (occurrenceCounter === targetOrdinal) {
+                    results.push(new Date(date)); 
+                    bookingsCreated++;
+                    monthFinished = true; 
+                }
+            }
+
+            date.setDate(date.getDate() + 1);
+            if (date.getMonth() !== currentMonth) {
+                monthFinished = true;
+            }
+        }
+        date.setMonth(date.getMonth()); 
+        date.setDate(1);
+    }
+    return results;
+}
 
     static async createRecurringBooking(description, roomID, bookingDate,duration, title, frequency,recurrenceLength){
         try {
