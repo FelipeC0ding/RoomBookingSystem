@@ -159,13 +159,13 @@ export default class FetchDAL{
     static async createMonthlyRecurringBooking(description, roomID, bookingDate,duration, title, frequency,recurrenceLength, monthlyOrdinal, monthlyWeekday,monthlyType){
         const timings = duration.split(" - ");
         let date = new Date(bookingDate);
-        const ordinal = monthlyOrdinal.toLowerCase();
+        const ordinal = monthlyOrdinal;
         let user = await this.getUserData();
         let userID = user.id;
         const dateBooked = new Date().toISOString().split('T')[0];
 
-        console.log('Monthly fixed DATA:',userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked)
-
+        console.log('Monthly fixed DATA:',userID, description, roomID, bookingDate, duration, title, recurrenceLength, monthlyOrdinal, monthlyWeekday,monthlyType)
+        console.log(monthlyType)
         if(monthlyType.toLowerCase() === 'fixed'){
             for (let index = 0; index < recurrenceLength; index++) {
                 const { error } = await supabase
@@ -187,9 +187,10 @@ export default class FetchDAL{
             }
         }
         else if(monthlyType.toLowerCase() === 'ordinal'){
-            let bookingDates = this.createSpecificWeekdayBookings()
-            
-            for(let index = 0; index < 1; index++){
+            let bookingDates = await this.createSpecificWeekdayBookings(bookingDate,monthlyWeekday, monthlyOrdinal, recurrenceLength)
+            console.log('Important',bookingDate,monthlyWeekday, monthlyOrdinal, recurrenceLength)
+            for(let index = 0; index < bookingDates.length; index++){
+                console.log(bookingDates)
                 const { error } = await supabase
                     .from('Booking')
                     .insert({
@@ -208,7 +209,7 @@ export default class FetchDAL{
         }
     }
 
-    static createSpecificWeekdayBookings(userID, roomID, bookingDate, duration, title, targetDay, targetOrdinal, recurrenceLength) {
+    static createSpecificWeekdayBookings(bookingDate,targetDay, targetOrdinal, recurrenceLength) {
     let date = new Date(bookingDate);
     date.setDate(1); 
     
@@ -221,9 +222,9 @@ export default class FetchDAL{
         let currentMonth = date.getMonth();
 
         while (!monthFinished) {
-            if (date.getDay() === targetDay) {
+            if (date.getDay() === parseInt(targetDay)) {
                 occurrenceCounter++;
-                if (occurrenceCounter === targetOrdinal) {
+                if (occurrenceCounter === parseInt(targetOrdinal)) {
                     results.push(new Date(date)); 
                     bookingsCreated++;
                     monthFinished = true; 
@@ -236,7 +237,6 @@ export default class FetchDAL{
             }
         }
         date.setMonth(date.getMonth()); 
-        date.setDate(1);
     }
     return results;
 }
@@ -252,7 +252,7 @@ export default class FetchDAL{
             if (freq === 'daily') {
                 spacing = 1;
                 console.log('Processing Daily');
-                this.createDailyBooking(userID,description, roomID, bookingDate,duration, title,recurrenceLength,dateBooked);
+                await this.createDailyBooking(userID,description, roomID, bookingDate,duration, title,recurrenceLength,dateBooked);
             } 
             else if (freq === 'weekly') 
             {
@@ -387,6 +387,31 @@ export default class FetchDAL{
             .eq('BookingDate', bookingDate);
 
         console.log('Bookings',data)
+        return data
+
+        }
+        catch(error){
+            console.log(error.message)
+        }
+    }
+
+    static async fetchBookingsWeek(roomID, startDate, endDate){
+        try{
+        const { data, error } = await supabase
+            .from('Booking')
+            .select(`
+                *,
+                User (
+                    Firstname,
+                    Surname,
+                    UserEmail
+                )
+            `)
+            .eq('RoomID', roomID)
+            .gte('BookingDate', startDate) 
+            .lte('BookingDate', endDate);
+
+        console.log('Bookings for the week for room ID',roomID,'      ',data)
         return data
 
         }

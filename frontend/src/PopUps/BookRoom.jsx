@@ -20,18 +20,25 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
   const [frequency, setFrequency] = useState('')
   const [recurrenceLength, setRecurrenceLength] = useState(4); 
   const [monthlyType, setMonthlyType] = useState('date'); 
-  const [monthlyOrdinal, setMonthlyOrdinal] = useState('1st');
-  const [monthlyWeekday ,setMonthlyWeekday] = useState('Monday')
-  const ordinals = ["1st", "2nd", "3rd", "4th", "last"];
+  const [monthlyOrdinal, setMonthlyOrdinal] = useState(1);
+  const [monthlyWeekday ,setMonthlyWeekday] = useState(1)
+  const ordinals = [
+  { label: "1st", value: 1 },
+  { label: "2nd", value: 2 },
+  { label: "3rd", value: 3 },
+  { label: "4th", value: 4 }
+];
   const weekdays = {0:'Sunday', 1:'Monday', 2:'Tuesday', 3:'Wednesday', 4:'Thursday', 5:'Friday', 6:'Saturday'};
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   useEffect(() => {
-    const dayName = weekdays[new Date(bookingDate).getDay()];
-    const weekNum = Math.ceil(new Date(bookingDate).getDate() / 7);
+    const dateObj = new Date(bookingDate);
+    const dayIndex = dateObj.getDay(); 
+    const dayOfMonth = dateObj.getDate();
+    const weekNum = Math.ceil(dayOfMonth / 7);
 
-    setMonthlyWeekday(dayName);
-    setMonthlyOrdinal(weekNum > 4 ? "last" : ordinals[weekNum - 1]);
-  }, [bookingDate]);
+    setMonthlyWeekday(dayIndex);
+    setMonthlyOrdinal(weekNum > 4 ? 4 : weekNum); 
+}, [bookingDate]);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
       <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl transform animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 border border-white/20">
@@ -157,17 +164,21 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
                     <div className="flex-1 relative">
                       <select
                         value={monthlyOrdinal}
-                        onChange={(e) => setMonthlyOrdinal(e.target.value)}
+                        onChange={(e) => setMonthlyOrdinal(parseInt(e.target.value))}
                         className="w-full appearance-none bg-white border border-blue-200 rounded-lg p-2 pr-8 text-xs font-bold text-blue-700 outline-none"
                       >
-                        {ordinals.map(o => <option key={o} value={o}>{o.toUpperCase()}</option>)}
+                        {ordinals.map(o => (
+                          <option key={o.value} value={o.value}>
+                            {o.label.toUpperCase()}
+                          </option>
+                        ))}
                       </select>
                       <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-400 pointer-events-none" />
                     </div>
                     <div className="flex-[1.5] relative">
                       <select
                         value={monthlyWeekday}
-                        onChange={(e) => setMonthlyWeekday(e.target.value)}
+                        onChange={(e) => setMonthlyWeekday(parseInt(e.target.value))}
                         className="w-full appearance-none bg-white border border-blue-200 rounded-lg p-2 pr-8 text-xs font-bold text-blue-700 outline-none"
                       >
                         {Object.entries(weekdays).map(([key, value]) => (
@@ -205,7 +216,8 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
               {
                 if(isRecurring){
                   if(frequency === 'Monthly' && monthlyType === 'ordinal'){
-                    await fetchData.createMonthlyRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength, monthlyOrdinal, monthlyWeekday);
+                    await fetchData.createMonthlyRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength, monthlyOrdinal, monthlyWeekday,monthlyType);
+                    console.log(monthlyOrdinal, monthlyWeekday,monthlyType)
                   }
                   else if(frequency === 'Monthly' && monthlyType === 'fixed'){
                       await fetchData.createMonthlyRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength, monthlyOrdinal, monthlyWeekday,monthlyType);

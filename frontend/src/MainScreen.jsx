@@ -9,16 +9,35 @@ import ProfilePage from './profile.jsx'
 function Menu(props) {
     const [rooms, setRooms] = useState([]);
     const [selectedRoomForWeek, setSelectedRoomForWeek] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [bookings, setBookings] = useState([]);
+
+    const weekDays = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(props.viewDate);
+        const dayOfWeek = d.getDay();
+        const diffToMonday = (dayOfWeek === 0) ? 6 : dayOfWeek - 1;
+        d.setDate(d.getDate() - diffToMonday + i);
+        
+        return d.toISOString().split('T')[0];
+    });
 
     useEffect(() => {
         async function getRoomsToDisplay() {
             const data = await fetchData.getRooms()
             setRooms(data)
-            // Default the week selector to the first room
-            if (data.length > 0) setSelectedRoomForWeek(data[0].RoomID);
+            if (data.length > 0 && !selectedRoomForWeek) setSelectedRoomForWeek(data[0].RoomID);
         }
         getRoomsToDisplay()
     }, [])
+
+    useEffect(() => {
+        if(rooms.length>0){
+            console.log(rooms)
+            console.log('loading date. Rooms^^')
+            loadData();
+
+        }
+    },[props.viewDate, props.viewType,selectedRoomForWeek, rooms]);
 
     let filteredRooms = rooms.filter(room => 
         room.RoomName.toLowerCase().includes(props.roomFilter.toLowerCase())
@@ -30,36 +49,49 @@ function Menu(props) {
         title: '',
         message: '',
         roomID: 0,
+        targetDate: '',
         timeDuration: ''
     });
-    const [isLoading, setIsLoading] = useState(true);
-    const [bookings, setBookings] = useState([]);
 
     const loadData = async () => {
         setIsLoading(true);
+        const activeRoomID = selectedRoomForWeek || (rooms.length > 0 ? rooms[0].RoomID : null);
+        if(!activeRoomID){
+//            setBookings([]);
+            return;
+        }
         try {
-            const data = await fetchData.fetchBookings(props.viewDate, props.viewType);
-            setBookings(data);
+            let data = []
+            if(props.viewType === 'week'){
+                let startDate = new Date(props.viewDate);
+                let dayOfWeek = startDate.getDay();
+                let daysToSubtract = (dayOfWeek === 0) ? 6 : dayOfWeek - 1;
+                startDate.setDate(startDate.getDate() - daysToSubtract)
+
+                let endDate = new Date(startDate)
+                endDate.setDate(startDate.getDate()+6)
+                console.log(startDate,'     ', endDate)
+                console.log('selected room',selectedRoomForWeek)
+                data = await fetchData.fetchBookingsWeek(selectedRoomForWeek, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0])
+            }
+            else{
+                data = await fetchData.fetchBookings(props.viewDate, props.viewType);
+            }
+            setBookings([...(data || [])]);
         } finally {
             setIsLoading(false);
         }
     };
 
-    useEffect(() => {
-        loadData();
-    }, [props.viewDate, props.viewType]);
-
     const bookingMap = {};
-    bookings.forEach(b => {
-        const key = `${String(b.RoomID)}-${b.BookingDate}-${String(b.BookingStartTime.substring(0, 5))}`;
+    (bookings || []).forEach(b => {
+        // Ensure we are only looking at the YYYY-MM-DD part of the database date
+        const dbDate = new Date(b.BookingDate).toISOString().split('T')[0];
+        const key = `${String(b.RoomID)}-${dbDate}-${String(b.BookingStartTime.substring(0, 5))}`;
         bookingMap[key] = b;
     });
 
-    const weekDays = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date(props.viewDate);
-        d.setDate(d.getDate() + i);
-        return d.toISOString().split('T')[0];
-    });
+    
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col items-center">
@@ -191,6 +223,7 @@ function Menu(props) {
                                                         title: 'Make a booking',
                                                         message: `Booking for ${currentDate}`,
                                                         roomID: currentRoomID,
+                                                        targetDate: currentDate,
                                                         timeDuration: `${range}`
                                                     })}
                                                     className="text-[10px] font-bold text-emerald-500 tracking-tight hover:scale-105 transition-transform"
@@ -207,17 +240,23 @@ function Menu(props) {
                 </div>
             </div>
 
-            <PopUp
+           <PopUp
                 isOpen={popupConfig.isOpen}
                 type={popupConfig.type}
                 title={popupConfig.title}
                 message={popupConfig.message}
                 roomID={popupConfig.roomID}
                 timeDuration={popupConfig.timeDuration}
-                bookingDate={props.viewDate}
+                // Correctly uses the specific date clicked in the grid
+                bookingDate={popupConfig.targetDate}
                 onClose={async () => {
-                    setPopupConfig({ ...popupConfig, isOpen: false });
-                    await loadData();
+                    // 1. Close UI immediately
+                    setPopupConfig(prev => ({ ...prev, isOpen: false }));
+                    
+                    // 2. Delay slightly so Supabase has time to finish the loop of inserts
+                    setTimeout(async () => {
+                        await loadData();
+                    }, 200); // 200ms is usually the sweet spot for bulk inserts
                 }}
             />
         </div>
