@@ -85,16 +85,6 @@ function AdminPage({ onGoBack }) {
                         <span>System Settings</span>
                     </button>
                 </div>
-
-                {/* Danger Zone */}
-                <div className="mt-6 pt-6 border-t border-gray-100">
-                    <button
-                        className="w-full md:w-auto px-6 py-3 bg-red-50 text-red-600 font-bold rounded-lg hover:bg-red-600 hover:text-white transition-all shadow-sm"
-                        onClick={onGoBack}
-                    >
-                        Exit Admin
-                    </button>
-                </div>
             </div>
         </div>
     );

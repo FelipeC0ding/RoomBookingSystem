@@ -578,7 +578,6 @@ export default class FetchDAL{
     }
 
      static async GetDepartmentName(id){
-        console.log("--- Executing DeptName fetch ---");
         const{data, error} = await supabase
             .from('Department')
             .select('Name')
@@ -588,12 +587,8 @@ export default class FetchDAL{
         if (error) {
         console.log(error)
             throw error
-        } else {
-            console.log('Name',Name);
+        } 
         }
-
-        return data.Name
-    }
 
     static async deleteBooking(bookingID){
         try{
