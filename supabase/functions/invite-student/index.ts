@@ -14,10 +14,10 @@ console.log("Hello from Functions!")
 
 serve(async (req) => {
   const { email } = await req.json()
-  const supabaseAdmin = createClient(
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
+  const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')! // super-admin powers. It can bypass (RLS) ! = i promise these vars exist
 )
