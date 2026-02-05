@@ -4,6 +4,7 @@ import {
   ArrowLeft, UserMinus, ShieldCheck, ShieldAlert, 
   CheckCircle, XCircle, Users 
 } from 'lucide-react';
+import { supabase } from './supabaseClient';
 
 function ManageUsers({ onGoBack }) {
     const [activeTab, setActiveTab] = useState('active');
@@ -11,7 +12,6 @@ function ManageUsers({ onGoBack }) {
     const [confirmingAdminId, setConfirmingAdminId] = useState(null);
     const [confirmingDeleteId, setConfirmingDeleteId] = useState(null);
 
-    // 1. Fetch data once on load
     useEffect(() => {
         async function getUsers() {
             const data = await fetchData.getAllUsers();
@@ -20,12 +20,10 @@ function ManageUsers({ onGoBack }) {
         getUsers();
     }, []);
 
-    // 2. DERIVED STATE: These update automatically when 'users' changes
     const activeList = users.filter(u => u.Confirmed);
     const pendingList = users.filter(u => !u.Confirmed);
     const displayedUsers = activeTab === 'active' ? activeList : pendingList;
 
-    // 3. SMART TOGGLE: Handles both Promote and Demote
     const handleToggleAdmin = async (user) => {
         if (!user) {
             setConfirmingAdminId(null);
@@ -35,20 +33,31 @@ function ManageUsers({ onGoBack }) {
         const isAdmin = user.Role.toUpperCase() === 'ADMIN';
         const newRole = isAdmin ? 'standard' : 'admin';
 
-        // Update Database
         if (isAdmin) {
             await fetchData.removeAdmin(user.UserID);
         } else {
             await fetchData.makeAdmin(user.UserID);
         }
 
-        // Update UI: Re-filtering happens automatically because state changed
         setUsers(prev => prev.map(u => 
             u.UserID === user.UserID ? { ...u, Role: newRole } : u
         ));
         
         setConfirmingAdminId(null);
     };
+
+    const handleInviteUser = async (email) =>{
+        try{
+            const {data,error} = await supabase.functions.invoke('invite-student',{
+                body: {email:email},
+            })
+
+        }
+        catch(error){
+            console.log(error.message)
+        }
+
+    }
 
     const handleDeleteUser = async (userId) => {
         await fetchData.deleteUser(userId);
@@ -78,6 +87,19 @@ function ManageUsers({ onGoBack }) {
                             Requests ({pendingList.length})
                         </button>
                     </div>
+                </div>
+
+                <div className="flex justify-start items-center gap-8 mb-6">
+                    <h2 className="text-xl font-bold text-slate-800">Invite a user:</h2>
+                    <button
+                        className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-2xl font-black text-[12px] tracking-widest uppercase shadow-lg shadow-blue-200 hover:bg-blue-700 hover:-translate-y-0.5 transition-all"
+                        onClick ={()=>{
+                            const email = window.prompt('Enter the email address');
+                            if(email){handleInviteUser(email)}
+                        }}
+                    >
+                        Invite!
+                    </button>
                 </div>
 
                 <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
