@@ -48,8 +48,10 @@ function ManageUsers({ onGoBack }) {
 
     const handleInviteUser = async (email) =>{
         try{
+            console.log(email)
+            let formattedEmail = toString(email)
             const {data,error} = await supabase.functions.invoke('invite-student',{
-                body: {email:email},
+                body: {email:formattedEmail},
             })
 
         }
