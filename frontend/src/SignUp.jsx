@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Lock, UserPlus, ArrowLeft, School, User, ShieldCheck } from 'lucide-react';
 import FetchData from './DAL/FetchData';
 import PopUp from './PopUps/popUpSignUp';
+import { useNavigate } from 'react-router-dom'
+import { supabase } from './supabaseClient';
 
 const INPUT_CONTAINER = "relative mb-1 w-full";
 const ICON_STYLE = "absolute left-3 top-1/2 -translate-y-1/2 text-gray-400";
@@ -12,7 +14,7 @@ const INPUT_STYLE = `
   text-black caret-black
 `;
 
-function SignUp({ onSwitch }) {
+function SignUp() {
     const [schools, setSchools] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedSchool, setSelectedSchool] = useState('');
@@ -34,8 +36,36 @@ function SignUp({ onSwitch }) {
         title: '',
         message: ''
     });
-
+    const navigate = useNavigate()
     const isStrong = password.length >= 6 && /[A-Z]/.test(password) && /[^A-Za-z0-9]/.test(password);
+
+    useEffect(() => {
+        const initPage = async () => {
+            // Check Session
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (!session) {
+                // No session means the link is invalid or expired
+                navigate('/LoginPage');
+                return;
+            }
+
+            // Auto-fill email from the invite session
+            setEmail(session.user.email); 
+
+            // Load Schools
+            try {
+                const schoolData = await FetchData.GetSchools();
+                setSchools(schoolData);
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        initPage();
+    }, [navigate]);
 
     useEffect(() => {
         async function getALlSchools() {
@@ -300,7 +330,7 @@ function SignUp({ onSwitch }) {
                 message={popupConfig.message}
                 onClose={() => {
                     setPopupConfig({ ...popupConfig, isOpen: false });
-                    if (popupConfig.type === 'success') onSwitch();
+                    if (popupConfig.type === 'success') navigate('/MainScreen');
                 }}
             />
         </div>
