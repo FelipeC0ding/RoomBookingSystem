@@ -1,6 +1,7 @@
 import React from 'react';
 import { Mail, Lock, LogIn, ShieldCheck, UserPlus, ArrowRight } from 'lucide-react';
 
+
 const INPUT_CONTAINER = "relative mb-1 w-full";
 const ICON_STYLE = "absolute left-3 top-1/2 -translate-y-1/2 text-gray-400";
 const INPUT_STYLE = `
@@ -10,7 +11,35 @@ const INPUT_STYLE = `
   text-black caret-black
 `;
 import { Link } from 'react-router-dom';
-function LoginPage({ email, setEmail, pass, setPass, loading, onSubmit, authError }) {
+function LoginPage() {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [authError, setAuthError] = useState(null);
+
+    const navigate = useNavigate();
+
+    // 2. Handle the login logic LOCALLY
+    const handleLogin = async (e) => {
+        e.preventDefault(); // Stop the page from reloading (The Flicker)
+        setLoading(true);
+        setAuthError(null);
+
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password,
+        });
+
+        if (error) {
+            setAuthError(error.message);
+            setLoading(false);
+        } else {
+            // Success! The Router in App.js will detect the session change
+            // and automatically redirect you to /MainScreen.
+            // We don't need to do anything here.
+        }
+    };
+    
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
             {/* Desktop-optimized container: Wide layout */}
@@ -40,7 +69,7 @@ function LoginPage({ email, setEmail, pass, setPass, loading, onSubmit, authErro
                         <p className="text-gray-500 mt-2 text-sm">Please enter your credentials to continue</p>
                     </div>
 
-                    <form onSubmit={onSubmit} className="space-y-5">
+                    <form onSubmit={handleLogin()} className="space-y-5">
                         {/* EMAIL */}
                         <div className="space-y-1">
                             <label className="block text-sm font-semibold text-gray-700 ml-1">Email Address</label>
