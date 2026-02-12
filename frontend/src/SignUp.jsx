@@ -44,16 +44,18 @@ function SignUp() {
             // Check Session
             const { data: { session } } = await supabase.auth.getSession();
             
-            if (!session) {
-                // No session means the link is invalid or expired
-                navigate('/SignUp');
+            if (session) {
+                setupUser();
                 return;
             }
 
-            // Auto-fill email from the invite session
-            setEmail(session.user.email); 
-
-            // Load Schools
+            if(window.location.hash && window.location.hash.includes('access_token')){
+                return;
+            }
+            navigate('/LoginPage')
+        };
+        const setupUser = async (session) => {
+            setEmail(session.user.email);
             try {
                 const schoolData = await FetchData.GetSchools();
                 setSchools(schoolData);
@@ -61,10 +63,20 @@ function SignUp() {
                 console.error(error);
             } finally {
                 setLoading(false);
+                // Don't navigate away! You want them to fill out the form here.
             }
         };
+        initcPage();
 
-        initPage();
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                if (session) {
+                    await setupUser(session);
+                }
+            }
+        });
+
+    return () => subscription.unsubscribe();
     }, [navigate]);
 
     useEffect(() => {
