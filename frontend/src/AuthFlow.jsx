@@ -1,76 +1,84 @@
-import React, { useState } from 'react';
-import MainScreen from './MainScreen'; // Assuming FilterBar is the content after login
-import LoginPage from './LoginPage'; // The visual form
-import SignUpPage from './SignUp'; // You'll need this for signup
-import { supabase } from './supabaseClient'; // Only import Supabase here
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { supabase } from './supabaseClient';
 
-const signInUser = async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password,
-    });
+// Import your existing components
+import MainScreen from './MainScreen';
+import LoginPage from './LoginPage';
+import SignUpPage from './SignUp'; // Your invite/signup page
 
-    if (error) {
-        console.error('Login Error:', error.message);
-        throw new Error(error.message);
-    }
-    return data;
-};
+function App() {
+    const [session, setSession] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-function AuthFlow() {
-    const [email, setEmail] = useState('');
-    const [pass, setPass] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [isLoginView, setIsLoginView] = useState(true);
-    const [authError, setAuthError] = useState(null);
-
-    const handleLoginSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setAuthError(null);
-
-        try {
-            await signInUser(email, pass);
-            setIsLoggedIn(true);
-        } catch (error) {
-            setAuthError(error.message);
-        } finally {
+    useEffect(() => {
+        // 1. Check for active session on load
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setSession(session);
             setLoading(false);
-        }
-    };
+        });
 
-    const handleLogout = async () => {
-        await supabase.auth.signOut();
-        setIsLoggedIn(false);
-    };
+        // 2. Listen for changes (Login, Logout, Invite Link success)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session);
+            setLoading(false);
+        });
 
-    const toggleView = () => {
-        setIsLoginView(!isLoginView);
-        setAuthError(null);
-    };
+        return () => subscription.unsubscribe();
+    }, []);
 
-    if (isLoggedIn) {
-        return <MainScreen onLogout={handleLogout}/>;
+    // 3. Loading Screen (Crucial for Invite Links)
+    if (loading) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-gray-50">
+                <div className="text-xl font-semibold text-gray-600">Loading...</div>
+            </div>
+        );
     }
-
 
     return (
-        isLoginView ? (
-            <LoginPage
-                email={email}
-                setEmail={setEmail}
-                pass={pass}
-                setPass={setPass}
-                loading={loading}
-                onSubmit={handleLoginSubmit}
-                onSwitch={toggleView}
-                authError={authError}
-            />
-        ) : (
-            <SignUpPage onSwitch={toggleView} />
-        )
+        <BrowserRouter>
+            <Routes>
+                {/* ROOT PATH (/): 
+                   If logged in -> MainScreen
+                   If not -> LoginPage 
+                */}
+                <Route 
+                    path="/" 
+                    element={session ? <MainScreen /> : <Navigate to="/LoginPage" />} 
+                />
+
+                {/* LOGIN PATH: 
+                   If logged in -> Redirect to MainScreen
+                   If not -> Show Login Page
+                */}
+                <Route 
+                    path="/LoginPage" 
+                    element={!session ? <LoginPage /> : <Navigate to="/MainScreen" />} 
+                />
+
+                {/* SIGNUP PATH (For Invites): 
+                   This must be accessible even if 'session' is null initially,
+                   because the Invite Token is processed on this page.
+                */}
+                <Route 
+                    path="/SignUp" 
+                    element={<SignUpPage />} 
+                />
+
+                {/* MAIN APP PATH:
+                   Protected. Only accessible if session exists.
+                */}
+                <Route 
+                    path="/MainScreen" 
+                    element={session ? <MainScreen /> : <Navigate to="/LoginPage" />} 
+                />
+
+                {/* Catch-all Redirect */}
+                <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+        </BrowserRouter>
     );
 }
 
-export default AuthFlow;
+export default App;

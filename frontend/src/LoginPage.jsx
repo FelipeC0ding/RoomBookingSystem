@@ -9,8 +9,8 @@ const INPUT_STYLE = `
   outline-none transition-all shadow-sm placeholder:text-gray-400
   text-black caret-black
 `;
-
-function LoginPage({ email, setEmail, pass, setPass, loading, onSubmit, onSwitch, authError }) {
+import { Link } from 'react-router-dom';
+function LoginPage({ email, setEmail, pass, setPass, loading, onSubmit, authError }) {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
             {/* Desktop-optimized container: Wide layout */}
@@ -116,7 +116,7 @@ function LoginPage({ email, setEmail, pass, setPass, loading, onSubmit, onSwitch
                                 <UserPlus size={18} className="text-gray-400 group-hover:text-blue-600 transition-colors" />
                                 <span>Don't have an account?</span>
                                 <span className="text-blue-600 font-bold inline-flex items-center gap-1">
-                                    Create one <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                    Create one <Link to="/SignUp">Sign Up</Link>
                                 </span>
                             </button>
                         </div>

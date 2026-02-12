@@ -6,8 +6,8 @@ import AuthFlow from './AuthFlow'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-        <div>
-            <AuthFlow/>
-        </div>
+    <BrowserRouter>
+      <AuthFlow />
+    </BrowserRouter>
   </StrictMode>,
 )
