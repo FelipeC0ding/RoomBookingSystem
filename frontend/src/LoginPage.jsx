@@ -102,7 +102,7 @@ function LoginPage() {
                                     placeholder="••••••••"
                                     className={INPUT_STYLE}
                                     value={password}
-                                    onChange={(e) => setPass(e.target.value)}
+                                    onChange={(e) => setPassword(e.target.value)}
                                     required
                                 />
                             </div>
