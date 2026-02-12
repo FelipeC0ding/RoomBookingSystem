@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 
 // Import your existing components
@@ -7,7 +7,7 @@ import MainScreen from './MainScreen';
 import LoginPage from './LoginPage';
 import SignUpPage from './SignUp'; // Your invite/signup page
 
-function App() {
+function AuthFlow() {
     const [session, setSession] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -37,7 +37,6 @@ function App() {
     }
 
     return (
-        <BrowserRouter>
             <Routes>
                 {/* ROOT PATH (/): 
                    If logged in -> MainScreen
@@ -77,8 +76,7 @@ function App() {
                 {/* Catch-all Redirect */}
                 <Route path="*" element={<Navigate to="/" />} />
             </Routes>
-        </BrowserRouter>
     );
 }
 
-export default App;
+export default AuthFlow;
