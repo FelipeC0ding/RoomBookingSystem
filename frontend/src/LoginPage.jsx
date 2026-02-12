@@ -2,7 +2,7 @@ import React from 'react';
 import { Mail, Lock, LogIn, ShieldCheck, UserPlus, ArrowRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '/supabaseClient';
+import { supabase } from './supabaseClient';
 
 const INPUT_CONTAINER = "relative mb-1 w-full";
 const ICON_STYLE = "absolute left-3 top-1/2 -translate-y-1/2 text-gray-400";
