@@ -70,7 +70,7 @@ function LoginPage() {
                         <p className="text-gray-500 mt-2 text-sm">Please enter your credentials to continue</p>
                     </div>
 
-                    <form onSubmit={handleLogin()} className="space-y-5">
+                    <form onSubmit={handleLogin} className="space-y-5">
                         {/* EMAIL */}
                         <div className="space-y-1">
                             <label className="block text-sm font-semibold text-gray-700 ml-1">Email Address</label>
@@ -101,7 +101,7 @@ function LoginPage() {
                                     type="password"
                                     placeholder="••••••••"
                                     className={INPUT_STYLE}
-                                    value={pass}
+                                    value={password}
                                     onChange={(e) => setPass(e.target.value)}
                                     required
                                 />
