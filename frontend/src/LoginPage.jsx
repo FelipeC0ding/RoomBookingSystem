@@ -108,7 +108,7 @@ function LoginPage({ email, setEmail, pass, setPass, loading, onSubmit, authErro
 
                         {/* SWITCH TO SIGNUP */}
                         <div className="pt-8 border-t border-gray-50 text-center">
-                            <button
+                            <div
                                 type="button"
                                 className="group text-sm text-gray-500 hover:text-blue-600 font-medium inline-flex items-center gap-2 transition-colors"
                             >
@@ -117,7 +117,7 @@ function LoginPage({ email, setEmail, pass, setPass, loading, onSubmit, authErro
                                 <span className="text-blue-600 font-bold inline-flex items-center gap-1">
                                     Create one <Link to="/SignUp">Sign Up</Link>
                                 </span>
-                            </button>
+                            </div>
                         </div>
                     </form>
                 </div>

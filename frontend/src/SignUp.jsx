@@ -319,7 +319,7 @@ function SignUp() {
                                 "Create Account"
                             )}
                         </button>
-                        <button
+                        <div
                             type="button"
                             className="
                                 w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl
@@ -329,7 +329,7 @@ function SignUp() {
                         >
                             <ArrowLeft size={18} />
                             Already have an account? <Link to="/LoginPage">Log in</Link>
-                        </button>
+                        </div>
                     </div>
                 </form>
             </div>
