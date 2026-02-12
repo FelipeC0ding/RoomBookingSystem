@@ -4,7 +4,7 @@ import FetchData from './DAL/FetchData';
 import PopUp from './PopUps/popUpSignUp';
 import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
-import {link} from 'react-router-dom'
+import {Link} from 'react-router-dom'
 const INPUT_CONTAINER = "relative mb-1 w-full";
 const ICON_STYLE = "absolute left-3 top-1/2 -translate-y-1/2 text-gray-400";
 const INPUT_STYLE = `
