@@ -321,7 +321,6 @@ function SignUp() {
                         </button>
                         <button
                             type="button"
-                            onClick={onSwitch}
                             className="
                                 w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl
                                 text-gray-500 font-semibold transition-all duration-200

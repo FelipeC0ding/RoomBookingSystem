@@ -110,7 +110,6 @@ function LoginPage({ email, setEmail, pass, setPass, loading, onSubmit, authErro
                         <div className="pt-8 border-t border-gray-50 text-center">
                             <button
                                 type="button"
-                                onClick={onSwitch}
                                 className="group text-sm text-gray-500 hover:text-blue-600 font-medium inline-flex items-center gap-2 transition-colors"
                             >
                                 <UserPlus size={18} className="text-gray-400 group-hover:text-blue-600 transition-colors" />
