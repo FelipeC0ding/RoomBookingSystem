@@ -66,7 +66,7 @@ function SignUp() {
                 // Don't navigate away! You want them to fill out the form here.
             }
         };
-        initcPage();
+        initPage();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
