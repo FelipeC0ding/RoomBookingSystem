@@ -143,6 +143,8 @@ function SignUp() {
 
             // Pass the selected role to your API
             await FetchData.AddUser(email, password, firstname, surname, role, orgID, deptID);
+            const { error } = await supabase.auth.refreshSession();
+        if (error) console.error("Refresh failed:", error);
             console.log(email, password, firstname, surname, role, orgID, deptID)
 
             setPopupConfig({
