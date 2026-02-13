@@ -137,6 +137,7 @@ function SignUp() {
 
             // Pass the selected role to your API
             await FetchData.AddUser(email, password, firstname, surname, role, orgID, deptID);
+            console.log(email, password, firstname, surname, role, orgID, deptID)
 
             setPopupConfig({
                 isOpen: true,

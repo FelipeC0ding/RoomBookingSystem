@@ -5,6 +5,7 @@ import fetchData from './DAL/FetchData.js'
 import timeCalcs from './calculations/TimeCalcs.js'
 import PopUp from './PopUps/BookRoom.jsx';
 import ProfilePage from './profile.jsx'
+import { supabase } from './supabaseClient'
 
 function Menu(props) {
     const [rooms, setRooms] = useState([]);
@@ -263,7 +264,7 @@ function Menu(props) {
     );
 }
 
-function MainScreen({ onLogout }) {
+function MainScreen() {
     const [roomFilter, setRoomFilter] = useState('');
     const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]);
     const [viewType, setViewType] = useState('day'); 
@@ -272,6 +273,18 @@ function MainScreen({ onLogout }) {
     const [timePeriods, setTimePeriods] = useState([])
     const [userRole, setUserRole] = useState('')
 
+    const handleLogout = async () => {
+    // 2. Call Supabase directly
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+        console.error("Error logging out:", error);
+    }
+    
+    // 3. The Router in App.jsx creates a "Session Listener". 
+    // As soon as signOut() finishes, App.jsx sees the session is gone 
+    // and AUTOMATICALLY kicks you back to the Login Page.
+    };
     useEffect(() => {
         async function timePeriodsHeader() {
             const data = await timeCalcs.getTimeHeaders()
@@ -307,7 +320,7 @@ function MainScreen({ onLogout }) {
             viewType={viewType}
             setViewType={setViewType}
             handleAdminClick={() => setAdminPage(true)}
-            handleLogoutClick={onLogout}
+            handleLogoutClick={handleLogout}
             handleProfilePageClick={() => setProfilePage(true)}
             timePeriods={timePeriods}
         />
