@@ -6,7 +6,6 @@ export default class FetchDAL{
         console.log("--- Executing Supabase Insert ---");
         try{
             const { data: authData, error: authError } = await supabase.auth.updateUser({
-                email: email,
                 password: password,
                 options: {
                     data: {
