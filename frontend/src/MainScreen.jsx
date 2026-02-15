@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, ShieldAlert,Settings, LogOut, Filter, Calendar, CheckCircle2 } from 'lucide-react';
+import { User, ShieldAlert, Settings, LogOut, Filter, Calendar, CheckCircle2 } from 'lucide-react';
 import AdminPage from './Admin.jsx';
 import fetchData from './DAL/FetchData.js'
 import timeCalcs from './calculations/TimeCalcs.js'
@@ -18,7 +18,7 @@ function Menu(props) {
         const dayOfWeek = d.getDay();
         const diffToMonday = (dayOfWeek === 0) ? 6 : dayOfWeek - 1;
         d.setDate(d.getDate() - diffToMonday + i);
-        
+
         return d.toISOString().split('T')[0];
     });
 
@@ -32,15 +32,15 @@ function Menu(props) {
     }, [])
 
     useEffect(() => {
-        if(rooms.length>0){
+        if (rooms.length > 0) {
             console.log(rooms)
             console.log('loading date. Rooms^^')
             loadData();
 
         }
-    },[props.viewDate, props.viewType,selectedRoomForWeek, rooms]);
+    }, [props.viewDate, props.viewType, selectedRoomForWeek, rooms]);
 
-    let filteredRooms = rooms.filter(room => 
+    let filteredRooms = rooms.filter(room =>
         room.RoomName.toLowerCase().includes(props.roomFilter.toLowerCase())
     );
 
@@ -57,25 +57,25 @@ function Menu(props) {
     const loadData = async () => {
         setIsLoading(true);
         const activeRoomID = selectedRoomForWeek || (rooms.length > 0 ? rooms[0].RoomID : null);
-        if(!activeRoomID){
-//            setBookings([]);
+        if (!activeRoomID) {
+            //            setBookings([]);
             return;
         }
         try {
             let data = []
-            if(props.viewType === 'week'){
+            if (props.viewType === 'week') {
                 let startDate = new Date(props.viewDate);
                 let dayOfWeek = startDate.getDay();
                 let daysToSubtract = (dayOfWeek === 0) ? 6 : dayOfWeek - 1;
                 startDate.setDate(startDate.getDate() - daysToSubtract)
 
                 let endDate = new Date(startDate)
-                endDate.setDate(startDate.getDate()+6)
-                console.log(startDate,'     ', endDate)
-                console.log('selected room',selectedRoomForWeek)
+                endDate.setDate(startDate.getDate() + 6)
+                console.log(startDate, '     ', endDate)
+                console.log('selected room', selectedRoomForWeek)
                 data = await fetchData.fetchBookingsWeek(selectedRoomForWeek, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0])
             }
-            else{
+            else {
                 data = await fetchData.fetchBookings(props.viewDate, props.viewType);
             }
             setBookings([...(data || [])]);
@@ -92,7 +92,7 @@ function Menu(props) {
         bookingMap[key] = b;
     });
 
-    
+
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col items-center">
@@ -139,7 +139,7 @@ function Menu(props) {
                     </div>
 
                     {/* Day/Week Selector */}
-                    <select 
+                    <select
                         value={props.viewType}
                         onChange={(e) => props.setViewType(e.target.value)}
                         className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-slate-600 outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
@@ -150,8 +150,8 @@ function Menu(props) {
 
                     {/* NEW: Room selector appears beside Day/Week picker ONLY when week is selected */}
                     {props.viewType === 'week' && (
-                        <select 
-                            value={selectedRoomForWeek} 
+                        <select
+                            value={selectedRoomForWeek}
                             onChange={(e) => setSelectedRoomForWeek(parseInt(e.target.value))}
                             className="bg-blue-50 border border-blue-100 text-blue-600 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer animate-in fade-in slide-in-from-left-2 duration-200"
                         >
@@ -165,9 +165,9 @@ function Menu(props) {
 
                     <div className="flex-1" />
                     <div className="flex gap-2">
-                        <button onClick={props.handleAdminClick} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"><Settings size={20}/></button>
-                        <button onClick={props.handleProfilePageClick} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"><User size={20}/></button>
-                        <button onClick={props.handleLogoutClick} className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-colors"><LogOut size={20}/></button>
+                        <button onClick={props.handleAdminClick} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"><Settings size={20} /></button>
+                        <button onClick={props.handleProfilePageClick} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"><User size={20} /></button>
+                        <button onClick={props.handleLogoutClick} className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-colors"><LogOut size={20} /></button>
                     </div>
                 </div>
             </div>
@@ -203,7 +203,7 @@ function Menu(props) {
                                 {props.timePeriods.map((range, idx) => {
                                     const formattedRange = range.substring(0, 5);
                                     const currentBooking = bookingMap[`${String(currentRoomID)}-${currentDate}-${String(formattedRange)}`];
-                                    
+
                                     return (
                                         <div key={idx} className="h-20 border-b border-gray-50 p-2 flex items-center justify-center">
                                             {currentBooking ? (
@@ -217,7 +217,7 @@ function Menu(props) {
                                                     </span>
                                                 </div>
                                             ) : (
-                                                <button 
+                                                <button
                                                     onClick={() => setPopupConfig({
                                                         isOpen: true,
                                                         type: 'success',
@@ -241,7 +241,7 @@ function Menu(props) {
                 </div>
             </div>
 
-           <PopUp
+            <PopUp
                 isOpen={popupConfig.isOpen}
                 type={popupConfig.type}
                 title={popupConfig.title}
@@ -253,7 +253,7 @@ function Menu(props) {
                 onClose={async () => {
                     // 1. Close UI immediately
                     setPopupConfig(prev => ({ ...prev, isOpen: false }));
-                    
+
                     // 2. Delay slightly so Supabase has time to finish the loop of inserts
                     setTimeout(async () => {
                         await loadData();
@@ -267,28 +267,29 @@ function Menu(props) {
 function MainScreen() {
     const [roomFilter, setRoomFilter] = useState('');
     const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]);
-    const [viewType, setViewType] = useState('day'); 
+    const [viewType, setViewType] = useState('day');
     const [adminPage, setAdminPage] = useState(false);
     const [profilePage, setProfilePage] = useState(false)
     const [timePeriods, setTimePeriods] = useState([])
     const [userRole, setUserRole] = useState('')
 
     const handleLogout = async () => {
-    // 2. Call Supabase directly
-    const { error } = await supabase.auth.signOut();
-    
-    if (error) {
-        console.error("Error logging out:", error);
-    }
-    
-    // 3. The Router in App.jsx creates a "Session Listener". 
-    // As soon as signOut() finishes, App.jsx sees the session is gone 
-    // and AUTOMATICALLY kicks you back to the Login Page.
+        // 2. Call Supabase directly
+        const { error } = await supabase.auth.signOut();
+
+        if (error) {
+            console.error("Error logging out:", error);
+        }
+
+        // 3. The Router in App.jsx creates a "Session Listener". 
+        // As soon as signOut() finishes, App.jsx sees the session is gone 
+        // and AUTOMATICALLY kicks you back to the Login Page.
     };
     useEffect(() => {
         async function timePeriodsHeader() {
             const data = await timeCalcs.getTimeHeaders()
             setTimePeriods(data)
+            console.log('Time periods:', data)
         }
         timePeriodsHeader()
     }, [])

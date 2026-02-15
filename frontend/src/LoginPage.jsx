@@ -133,19 +133,7 @@ function LoginPage() {
                             )}
                         </button>
 
-                        {/* SWITCH TO SIGNUP */}
-                        <div className="pt-8 border-t border-gray-50 text-center">
-                            <div
-                                type="button"
-                                className="group text-sm text-gray-500 hover:text-blue-600 font-medium inline-flex items-center gap-2 transition-colors"
-                            >
-                                <UserPlus size={18} className="text-gray-400 group-hover:text-blue-600 transition-colors" />
-                                <span>Don't have an account?</span>
-                                <span className="text-blue-600 font-bold inline-flex items-center gap-1">
-                                    Create one <Link to="/SignUp">Sign Up</Link>
-                                </span>
-                            </div>
-                        </div>
+                        
                     </form>
                 </div>
             </div>

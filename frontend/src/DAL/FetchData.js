@@ -61,6 +61,24 @@ export default class FetchDAL {
         console.log('All Users', data)
         return data;
     }
+    static async getUserData() 
+    {
+        const { data, error } = await supabase.auth.getUser();
+        if (error) {
+            console.log(error.message)
+            return null
+        }
+        else {
+            console.log('Current user', data.user)
+            return data.user
+        }
+
+    }
+    static isWeekend(date) {
+        if (date.getDay() === 6 || date.getDay() === 0) {
+            return true
+        }
+    }
     static async getCurrentUser() {
         let user = await this.getUserData();
         let uid = user.id
@@ -78,6 +96,16 @@ export default class FetchDAL {
         }
 
         return data
+    }
+
+    static async loggedInOrgID()
+    {
+        let currentUser = await this.getCurrentUser()
+        let result = currentUser.OrganisationID;
+        result = parseInt(result)
+        console.log('Returned user', currentUser)
+        console.log('RESUT', result)
+        return result
     }
 
     static async makeAdmin(userID) {
@@ -107,23 +135,6 @@ export default class FetchDAL {
 
     }
 
-    static async getUserData() {
-        const { data, error } = await supabase.auth.getUser();
-        if (error) {
-            console.log(error.message)
-            return null
-        }
-        else {
-            console.log('Current user', data.user)
-            return data.user
-        }
-
-    }
-    static isWeekend(date) {
-        if (date.getDay() === 6 || date.getDay() === 0) {
-            return true
-        }
-    }
     static async createDailyBooking(userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked) {
         const timings = duration.split(" - ");
         let date = new Date(bookingDate);
@@ -433,14 +444,7 @@ export default class FetchDAL {
 
 
     }
-    static async loggedInOrgID() {
-        let currentUser = await this.getCurrentUser()
-        let result = currentUser.OrganisationID;
-        result = parseInt(result)
-        console.log('Returned user', currentUser)
-        console.log('RESUT', result)
-        return result
-    }
+
 
     static async GetSchools() {
         console.log("--- Executing Supabase fetch ---");

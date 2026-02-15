@@ -6,7 +6,7 @@ export default class TimeCalcs {
     let formattedTimePeriods = [];
 
     const orgID = await FetchData.loggedInOrgID();
-
+    console.log('FETCHING ORGID:', orgID)
     const { data, error } = await supabase
       .from('Organisation')
       .select('*')
