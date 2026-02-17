@@ -72,7 +72,6 @@ export default class FetchDAL {
             console.log('Current user', data.user)
             return data.user
         }
-
     }
     static isWeekend(date) {
         if (date.getDay() === 6 || date.getDay() === 0) {
@@ -123,6 +122,34 @@ export default class FetchDAL {
     }
     static async removeAdmin(userID) {
         console.log('UserID to have admin revoked', userID)
+        try {
+            const { error } = await supabase
+                .from('User')
+                .update({ 'Role': 'standard' })
+                .eq('UserID', userID)
+        }
+        catch (error) {
+            console.log(error.message)
+        }
+
+    }
+
+    static async ApproveRequest(userID) {
+        console.log('UserID to be approved', userID)
+        try {
+            const { error } = await supabase
+                .from('User')
+                .update({ 'Role': 'standard' })
+                .eq('UserID', userID)
+        }
+        catch (error) {
+            console.log(error.message)
+        }
+
+    }
+
+    static async DenyRequest(userID) {
+        console.log('UserID to be denied', userID)
         try {
             const { error } = await supabase
                 .from('User')
@@ -463,22 +490,29 @@ export default class FetchDAL {
 
     }
 
-    static async getRooms() {
+    static async getRooms(){
         console.log('Getting Rooms')
-
-        const { data, error } = await supabase
+        const{data, error} = await supabase
             .from('Room')
             .select('*')
             .eq('IsAvailable', true)
-
+        let userConfirmed = await this.getCurrentUser()
+        console.log('User Object:', userConfirmed);
+        userConfirmed = userConfirmed.Confirmed
         if (error) {
-            console.log('get room method error', error.message, error.code)
+            console.log(error.message, error.code)
         } else {
             console.log('SUCCESS:', data);
         }
-        console.log('ROOMS: ', data)
-        return data
+        if(userConfirmed){
+           return data
+        }
+        else{
+            return []
+
+        }
     }
+
     static async AddNewRoom(title, location, capacity, features) {
 
         try {

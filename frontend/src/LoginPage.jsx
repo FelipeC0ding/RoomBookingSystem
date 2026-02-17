@@ -131,9 +131,7 @@ function LoginPage() {
                                     <LogIn size={20} />
                                 </>
                             )}
-                        </button>
-
-                        
+                        </button> 
                     </form>
                 </div>
             </div>

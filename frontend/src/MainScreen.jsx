@@ -4,6 +4,7 @@ import AdminPage from './Admin.jsx';
 import fetchData from './DAL/FetchData.js'
 import timeCalcs from './calculations/TimeCalcs.js'
 import PopUp from './PopUps/BookRoom.jsx';
+import ErrorPopUp from './PopUps/BookRoom.jsx';
 import ProfilePage from './profile.jsx'
 import { supabase } from './supabaseClient'
 
@@ -52,6 +53,11 @@ function Menu(props) {
         roomID: 0,
         targetDate: '',
         timeDuration: ''
+    });
+
+    const [errorPopup, setErrorPopup] = useState({
+        isOpen: false,
+        message: '',
     });
 
     const loadData = async () => {
@@ -250,6 +256,19 @@ function Menu(props) {
                 timeDuration={popupConfig.timeDuration}
                 // Correctly uses the specific date clicked in the grid
                 bookingDate={popupConfig.targetDate}
+                onClose={async () => {
+                    // 1. Close UI immediately
+                    setPopupConfig(prev => ({ ...prev, isOpen: false }));
+
+                    // 2. Delay slightly so Supabase has time to finish the loop of inserts
+                    setTimeout(async () => {
+                        await loadData();
+                    }, 200); // 200ms is usually the sweet spot for bulk inserts
+                }}
+            />
+            <ErrorPopUp
+                isOpen={popupConfig.isOpen}
+                message={popupConfig.message}
                 onClose={async () => {
                     // 1. Close UI immediately
                     setPopupConfig(prev => ({ ...prev, isOpen: false }));
