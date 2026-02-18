@@ -4,7 +4,7 @@ import AdminPage from './Admin.jsx';
 import fetchData from './DAL/FetchData.js'
 import timeCalcs from './calculations/TimeCalcs.js'
 import PopUp from './PopUps/BookRoom.jsx';
-import ErrorPopUp from './PopUps/BookRoom.jsx';
+import ErrorPopUp from './PopUps/ErrorPopUp.jsx';
 import ProfilePage from './profile.jsx'
 import { supabase } from './supabaseClient'
 
@@ -13,7 +13,8 @@ function Menu(props) {
     const [selectedRoomForWeek, setSelectedRoomForWeek] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [bookings, setBookings] = useState([]);
-
+    const [showError, setShowError] = useState(false)
+    const [errorMessage, setErrorMessage] = useState('')
     const weekDays = Array.from({ length: 7 }, (_, i) => {
         const d = new Date(props.viewDate);
         const dayOfWeek = d.getDay();
@@ -28,6 +29,10 @@ function Menu(props) {
             const data = await fetchData.getRooms()
             setRooms(data)
             if (data.length > 0 && !selectedRoomForWeek) setSelectedRoomForWeek(data[0].RoomID);
+            if(data.length<1 || !data){
+                handleErrorMessage('Your account setup is not complete. Contact your admin')
+                return;
+                }
         }
         getRoomsToDisplay()
     }, [])
@@ -39,7 +44,7 @@ function Menu(props) {
             loadData();
 
         }
-    }, [props.viewDate, props.viewType, selectedRoomForWeek, rooms]);
+    }, [props.viewDate, props.viewType, selectedRoomForWeek]);
 
     let filteredRooms = rooms.filter(room =>
         room.RoomName.toLowerCase().includes(props.roomFilter.toLowerCase())
@@ -54,17 +59,15 @@ function Menu(props) {
         targetDate: '',
         timeDuration: ''
     });
-
-    const [errorPopup, setErrorPopup] = useState({
-        isOpen: false,
-        message: '',
-    });
-
+    const handleErrorMessage=(msg) =>{
+        setErrorMessage(msg)
+        setShowError(true)
+        console.log('Populating error message')
+    };
     const loadData = async () => {
         setIsLoading(true);
         const activeRoomID = selectedRoomForWeek || (rooms.length > 0 ? rooms[0].RoomID : null);
         if (!activeRoomID) {
-            //            setBookings([]);
             return;
         }
         try {
@@ -77,9 +80,8 @@ function Menu(props) {
 
                 let endDate = new Date(startDate)
                 endDate.setDate(startDate.getDate() + 6)
-                console.log(startDate, '     ', endDate)
                 console.log('selected room', selectedRoomForWeek)
-                data = await fetchData.fetchBookingsWeek(selectedRoomForWeek, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0])
+                data = await fetchData.fetchBookingsWeek(activeRoomID, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0])
             }
             else {
                 data = await fetchData.fetchBookings(props.viewDate, props.viewType);
@@ -267,17 +269,9 @@ function Menu(props) {
                 }}
             />
             <ErrorPopUp
-                isOpen={popupConfig.isOpen}
-                message={popupConfig.message}
-                onClose={async () => {
-                    // 1. Close UI immediately
-                    setPopupConfig(prev => ({ ...prev, isOpen: false }));
-
-                    // 2. Delay slightly so Supabase has time to finish the loop of inserts
-                    setTimeout(async () => {
-                        await loadData();
-                    }, 200); // 200ms is usually the sweet spot for bulk inserts
-                }}
+                message={errorMessage}
+                isOpen={showError}
+                onClose={() => setShowError(false)}
             />
         </div>
     );
@@ -291,6 +285,7 @@ function MainScreen() {
     const [profilePage, setProfilePage] = useState(false)
     const [timePeriods, setTimePeriods] = useState([])
     const [userRole, setUserRole] = useState('')
+    const [userConfirmed, setUserConfirmed] = useState(false)
 
     const handleLogout = async () => {
         // 2. Call Supabase directly
@@ -316,7 +311,10 @@ function MainScreen() {
     useEffect(() => {
         async function checkUserRole() {
             let data = (await fetchData.getCurrentUser());
-            if (data) setUserRole(data.Role.toUpperCase())
+            if (data){
+                 setUserRole(data.Role.toUpperCase())
+                 setUserConfirmed(data.Confirmed)
+            }
         }
         checkUserRole()
     }, [])
@@ -328,9 +326,17 @@ function MainScreen() {
         }
     }, [adminPage, userRole]);
 
-    if (profilePage) return <ProfilePage onGoBack={() => setProfilePage(false)} />;
-    if (adminPage && userRole === 'ADMIN') return <AdminPage onGoBack={() => setAdminPage(false)} />;
-
+    if (adminPage) {
+        if (userRole === 'ADMIN' && userConfirmed) {
+            return <AdminPage onGoBack={() => setAdminPage(false)} />;
+        } else {
+            // This only triggers if they click the admin button but aren't allowed
+            alert("Security: You do not have permission to access admin page.");
+            setAdminPage(false);
+            // We return null or the Menu here to prevent falling into an infinite loop
+            return <Menu {...menuProps} />;
+        }
+    }
     return (
         <Menu
             roomFilter={roomFilter}

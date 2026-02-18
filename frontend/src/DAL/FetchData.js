@@ -467,11 +467,7 @@ export default class FetchDAL {
         catch (error) {
             console.log(error.message)
         }
-
-
-
     }
-
 
     static async GetSchools() {
         console.log("--- Executing Supabase fetch ---");
