@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, ShieldAlert, Settings, LogOut, Filter, Calendar, CheckCircle2 } from 'lucide-react';
+import { User, ShieldAlert, Settings, LogOut, Filter, Calendar } from 'lucide-react';
 import AdminPage from './Admin.jsx';
 import fetchData from './DAL/FetchData.js'
 import timeCalcs from './calculations/TimeCalcs.js'
@@ -8,47 +8,36 @@ import ErrorPopUp from './PopUps/ErrorPopUp.jsx';
 import ProfilePage from './profile.jsx'
 import { supabase } from './supabaseClient'
 
+// --- MENU COMPONENT ---
 function Menu(props) {
     const [rooms, setRooms] = useState([]);
     const [selectedRoomForWeek, setSelectedRoomForWeek] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [bookings, setBookings] = useState([]);
-    const [showError, setShowError] = useState(false)
-    const [errorMessage, setErrorMessage] = useState('')
+    const [showError, setShowError] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+
     const weekDays = Array.from({ length: 7 }, (_, i) => {
         const d = new Date(props.viewDate);
         const dayOfWeek = d.getDay();
         const diffToMonday = (dayOfWeek === 0) ? 6 : dayOfWeek - 1;
         d.setDate(d.getDate() - diffToMonday + i);
-
         return d.toISOString().split('T')[0];
     });
 
     useEffect(() => {
         async function getRoomsToDisplay() {
-            const data = await fetchData.getRooms()
-            setRooms(data)
-            if (data.length > 0 && !selectedRoomForWeek) setSelectedRoomForWeek(data[0].RoomID);
-            if(data.length<1 || !data){
-                handleErrorMessage('Your account setup is not complete. Contact your admin')
-                return;
-                }
+            const data = await fetchData.getRooms();
+            setRooms(data || []);
+            if (data && data.length > 0 && !selectedRoomForWeek) {
+                setSelectedRoomForWeek(data[0].RoomID);
+            }
+            if (!data || data.length < 1) {
+                handleErrorMessage('Your account setup is not complete. Contact your admin');
+            }
         }
-        getRoomsToDisplay()
-    }, [])
-
-    useEffect(() => {
-        if (rooms.length > 0) {
-            console.log(rooms)
-            console.log('loading date. Rooms^^')
-            loadData();
-
-        }
-    }, [props.viewDate, props.viewType, selectedRoomForWeek]);
-
-    let filteredRooms = rooms.filter(room =>
-        room.RoomName.toLowerCase().includes(props.roomFilter.toLowerCase())
-    );
+        getRoomsToDisplay();
+    }, []);
 
     const [popupConfig, setPopupConfig] = useState({
         isOpen: false,
@@ -59,31 +48,26 @@ function Menu(props) {
         targetDate: '',
         timeDuration: ''
     });
-    const handleErrorMessage=(msg) =>{
-        setErrorMessage(msg)
-        setShowError(true)
-        console.log('Populating error message')
+
+    const handleErrorMessage = (msg) => {
+        setErrorMessage(msg);
+        setShowError(true);
     };
+
     const loadData = async () => {
         setIsLoading(true);
         const activeRoomID = selectedRoomForWeek || (rooms.length > 0 ? rooms[0].RoomID : null);
         if (!activeRoomID) {
+            setIsLoading(false);
             return;
         }
         try {
-            let data = []
+            let data = [];
             if (props.viewType === 'week') {
-                let startDate = new Date(props.viewDate);
-                let dayOfWeek = startDate.getDay();
-                let daysToSubtract = (dayOfWeek === 0) ? 6 : dayOfWeek - 1;
-                startDate.setDate(startDate.getDate() - daysToSubtract)
-
-                let endDate = new Date(startDate)
-                endDate.setDate(startDate.getDate() + 6)
-                console.log('selected room', selectedRoomForWeek)
-                data = await fetchData.fetchBookingsWeek(activeRoomID, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0])
-            }
-            else {
+                const startDate = new Date(weekDays[0]);
+                const endDate = new Date(weekDays[6]);
+                data = await fetchData.fetchBookingsWeek(activeRoomID, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]);
+            } else {
                 data = await fetchData.fetchBookings(props.viewDate, props.viewType);
             }
             setBookings([...(data || [])]);
@@ -92,19 +76,25 @@ function Menu(props) {
         }
     };
 
+    useEffect(() => {
+        if (rooms.length > 0) {
+            loadData();
+        }
+    }, [props.viewDate, props.viewType, selectedRoomForWeek, rooms]);
+
+    const filteredRooms = rooms.filter(room =>
+        room.RoomName.toLowerCase().includes(props.roomFilter.toLowerCase())
+    );
+
     const bookingMap = {};
     (bookings || []).forEach(b => {
-        // Ensure we are only looking at the YYYY-MM-DD part of the database date
         const dbDate = new Date(b.BookingDate).toISOString().split('T')[0];
         const key = `${String(b.RoomID)}-${dbDate}-${String(b.BookingStartTime.substring(0, 5))}`;
         bookingMap[key] = b;
     });
 
-
-
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col items-center">
-            {/* 1. Sleek Title Banner */}
             <div className="w-full max-w-5xl px-4 pt-6 flex flex-col gap-4">
                 <div className="relative overflow-hidden bg-white/40 backdrop-blur-md rounded-2xl p-5 border border-white/60 shadow-sm">
                     <div className="relative flex items-center justify-between">
@@ -124,7 +114,6 @@ function Menu(props) {
                     </div>
                 </div>
 
-                {/* 2. Compact Control Bar */}
                 <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
                     <div className="relative w-64 group">
                         <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -146,7 +135,6 @@ function Menu(props) {
                         />
                     </div>
 
-                    {/* Day/Week Selector */}
                     <select
                         value={props.viewType}
                         onChange={(e) => props.setViewType(e.target.value)}
@@ -156,12 +144,11 @@ function Menu(props) {
                         <option value="week">Week</option>
                     </select>
 
-                    {/* NEW: Room selector appears beside Day/Week picker ONLY when week is selected */}
                     {props.viewType === 'week' && (
                         <select
-                            value={selectedRoomForWeek}
+                            value={selectedRoomForWeek || ""}
                             onChange={(e) => setSelectedRoomForWeek(parseInt(e.target.value))}
-                            className="bg-blue-50 border border-blue-100 text-blue-600 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer animate-in fade-in slide-in-from-left-2 duration-200"
+                            className="bg-blue-50 border border-blue-100 text-blue-600 rounded-lg px-3 py-2 text-sm font-bold outline-none cursor-pointer"
                         >
                             {rooms.map(r => (
                                 <option key={r.RoomID} value={r.RoomID}>
@@ -180,7 +167,6 @@ function Menu(props) {
                 </div>
             </div>
 
-            {/* 3. Grid Logic */}
             <div className="w-full flex-1 overflow-auto p-6 flex justify-center">
                 <div className="inline-flex bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden h-fit">
                     <div className="w-24 bg-gray-50/50 border-r border-gray-200 flex-shrink-0">
@@ -256,16 +242,12 @@ function Menu(props) {
                 message={popupConfig.message}
                 roomID={popupConfig.roomID}
                 timeDuration={popupConfig.timeDuration}
-                // Correctly uses the specific date clicked in the grid
                 bookingDate={popupConfig.targetDate}
                 onClose={async () => {
-                    // 1. Close UI immediately
                     setPopupConfig(prev => ({ ...prev, isOpen: false }));
-
-                    // 2. Delay slightly so Supabase has time to finish the loop of inserts
                     setTimeout(async () => {
                         await loadData();
-                    }, 200); // 200ms is usually the sweet spot for bulk inserts
+                    }, 200);
                 }}
             />
             <ErrorPopUp
@@ -277,79 +259,83 @@ function Menu(props) {
     );
 }
 
+// --- MAIN SCREEN COMPONENT ---
 function MainScreen() {
     const [roomFilter, setRoomFilter] = useState('');
     const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]);
     const [viewType, setViewType] = useState('day');
-    const [adminPage, setAdminPage] = useState(false);
-    const [profilePage, setProfilePage] = useState(false)
-    const [timePeriods, setTimePeriods] = useState([])
-    const [userRole, setUserRole] = useState('')
-    const [userConfirmed, setUserConfirmed] = useState(false)
-
-    const handleLogout = async () => {
-        // 2. Call Supabase directly
-        const { error } = await supabase.auth.signOut();
-
-        if (error) {
-            console.error("Error logging out:", error);
-        }
-
-        // 3. The Router in App.jsx creates a "Session Listener". 
-        // As soon as signOut() finishes, App.jsx sees the session is gone 
-        // and AUTOMATICALLY kicks you back to the Login Page.
-    };
-    useEffect(() => {
-        async function timePeriodsHeader() {
-            const data = await timeCalcs.getTimeHeaders()
-            setTimePeriods(data)
-            console.log('Time periods:', data)
-        }
-        timePeriodsHeader()
-    }, [])
+    const [activePage, setActivePage] = useState('menu'); 
+    const [timePeriods, setTimePeriods] = useState([]);
+    const [userRole, setUserRole] = useState('');
+    const [userConfirmed, setUserConfirmed] = useState(false);
+    const [showError, setShowError] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
-        async function checkUserRole() {
-            let data = (await fetchData.getCurrentUser());
-            if (data){
-                 setUserRole(data.Role.toUpperCase())
-                 setUserConfirmed(data.Confirmed)
+        async function loadInitialData() {
+            const times = await timeCalcs.getTimeHeaders();
+            setTimePeriods(times);
+
+            const user = await fetchData.getCurrentUser();
+            if (user) {
+                setUserRole(user.Role.toUpperCase());
+                setUserConfirmed(user.Confirmed);
             }
         }
-        checkUserRole()
-    }, [])
+        loadInitialData();
+    }, []);
 
-    useEffect(() => {
-        if (adminPage && userRole !== 'ADMIN') {
-            alert("Security: You do not have permission to access admin page.");
-            setAdminPage(false);
-        }
-    }, [adminPage, userRole]);
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+    };
 
-    if (adminPage) {
-        if (userRole === 'ADMIN' && userConfirmed) {
-            return <AdminPage onGoBack={() => setAdminPage(false)} />;
-        } else {
-            // This only triggers if they click the admin button but aren't allowed
-            alert("Security: You do not have permission to access admin page.");
-            setAdminPage(false);
-            // We return null or the Menu here to prevent falling into an infinite loop
-            return <Menu {...menuProps} />;
+    // Centralized Navigation Handler
+    const handleNavigation = (target) => {
+        if (!userConfirmed) {
+            setErrorMessage('Your account has not been verified. Please contact your IT admin.');
+            setShowError(true);
+            return;
         }
+
+        if (target === 'admin' && userRole !== 'ADMIN') {
+            alert("Security: You do not have permission to access admin page.");
+            return;
+        }
+
+        setActivePage(target);
+    };
+
+    // Conditional Page Rendering
+    if (activePage === 'admin' && userRole === 'ADMIN' && userConfirmed) {
+        return <AdminPage onGoBack={() => setActivePage('menu')} />;
     }
+
+    if (activePage === 'profile' && userConfirmed) {
+        return <ProfilePage onGoBack={() => setActivePage('menu')} />;
+    }
+
+    // Default view is the Menu + Error Listener
     return (
-        <Menu
-            roomFilter={roomFilter}
-            setRoomFilter={setRoomFilter}
-            viewDate={viewDate}
-            setViewDate={setViewDate}
-            viewType={viewType}
-            setViewType={setViewType}
-            handleAdminClick={() => setAdminPage(true)}
-            handleLogoutClick={handleLogout}
-            handleProfilePageClick={() => setProfilePage(true)}
-            timePeriods={timePeriods}
-        />
+        <>
+            <Menu
+                roomFilter={roomFilter}
+                setRoomFilter={setRoomFilter}
+                viewDate={viewDate}
+                setViewDate={setViewDate}
+                viewType={viewType}
+                setViewType={setViewType}
+                handleAdminClick={() => handleNavigation('admin')}
+                handleLogoutClick={handleLogout}
+                handleProfilePageClick={() => handleNavigation('profile')}
+                timePeriods={timePeriods}
+            />
+            
+            <ErrorPopUp
+                message={errorMessage}
+                isOpen={showError}
+                onClose={() => setShowError(false)}
+            />
+        </>
     );
 }
 
