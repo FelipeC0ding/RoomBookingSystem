@@ -90,6 +90,7 @@ function SignUp() {
             try {
                 setLoading(true);
                 const data = await FetchData.GetSchools();
+                console.log(data)
                 setSchools(data);
                 setLoading(false);
             } catch (error) {
