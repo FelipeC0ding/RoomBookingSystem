@@ -125,7 +125,7 @@ function SignUp() {
                 message: 'Please make sure both passwords are identical.'
             });
             setIsSubmitting(false);
-            return;
+            //return;
         }
 
         // 2. KEEP: Password Strength Check
@@ -137,7 +137,7 @@ function SignUp() {
                 message: 'Please make sure your password meets the requirements.'
             });
             setIsSubmitting(false);
-            return;
+            //return;
         }
 
         try {
