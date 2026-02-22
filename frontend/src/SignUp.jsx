@@ -142,8 +142,10 @@ function SignUp() {
             const orgID = await FetchData.GetOrganisationID(selectedSchool);
             const deptID = await FetchData.GetDepartmentID(selectedDepartment);
 
-            // Pass the selected role to your API
-            await FetchData.AddUser(email, password, firstname, surname, role, orgID, deptID);
+            const urlParams = new URLSearchParams(window.location.search)
+            const tokenHash = urlParams.get('token')
+            await FetchData.AddUser(email, password, firstname, surname, role, orgID, deptID,tokenHash);
+        
             const { error } = await supabase.auth.refreshSession();
         if (error) console.error("Refresh failed:", error);
             console.log(email, password, firstname, surname, role, orgID, deptID)

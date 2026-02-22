@@ -32,6 +32,18 @@ export default class FetchDAL {
                 throw error
 
             }
+
+            // 2. Verify the OTP (This "spends" the token only now!)
+            const { dataSpend, error: verifyError } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: 'invite',
+            })
+
+            if (verifyError) {
+            alert("Verification failed: " + verifyError.message)
+            setLoading(false)
+            return
+            }
         }
         catch (error) {
 
