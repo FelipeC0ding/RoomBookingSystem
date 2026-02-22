@@ -41,18 +41,22 @@ function SignUp() {
 
     useEffect(() => {
         const initPage = async () => {
-            // Check Session
             const { data: { session } } = await supabase.auth.getSession();
             
+            // If they already have a session, they are returning users
             if (session) {
-                setupUser();
+                setEmail(session.user.email);
                 return;
             }
 
-            if(window.location.hash && window.location.hash.includes('access_token')){
-                return;
+            // NEW: Check if there is a token in the URL. 
+            // If there is, DO NOT navigate to LoginPage. Let them stay and sign up.
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('token_hash')) {
+                return; 
             }
-            navigate('/LoginPage')
+
+            navigate('/LoginPage');
         };
         const setupUser = async (session) => {
             
@@ -112,6 +116,7 @@ function SignUp() {
         if (e) e.preventDefault();
         setIsSubmitting(true);
 
+        // 1. KEEP: Password Match Check
         if (password !== passwordConfirm) {
             setPopupConfig({
                 isOpen: true,
@@ -123,7 +128,8 @@ function SignUp() {
             return;
         }
 
-        if(!isStrong){
+        // 2. KEEP: Password Strength Check
+        if (!isStrong) {
             setPopupConfig({
                 isOpen: true,
                 type: 'error',
@@ -135,45 +141,53 @@ function SignUp() {
         }
 
         try {
+            // 3. Get Token from URL (Durable Link Strategy)
+            const urlParams = new URLSearchParams(window.location.search);
+            const tokenHash = urlParams.get('token_hash'); // Ensure this matches your Email Template key
+            const emailFromUrl = urlParams.get('email');
+
+            // 4. VERIFY THE TOKEN (This spends the token ONLY when they click the button)
+            const { error: verifyError } = await supabase.auth.verifyOtp({
+                token_hash: tokenHash,
+                type: 'invite',
+            });
+
+            if (verifyError) throw new Error("Invite link is invalid or expired. Please contact your admin.");
+
+            // 5. UPDATE PASSWORD (The user is now logged in via verifyOtp)
+            const { error: passwordError } = await supabase.auth.updateUser({
+                password: password
+            });
+
+            if (passwordError) throw passwordError;
+
+            // 6. DB INSERTS (Using your existing DAL logic)
             const orgID = await FetchData.GetOrganisationID(selectedSchool);
             const deptID = await FetchData.GetDepartmentID(selectedDepartment);
 
-            const urlParams = new URLSearchParams(window.location.search)
-            const tokenHash = urlParams.get('token')
-            await FetchData.AddUser(email, password, firstname, surname, role, orgID, deptID,tokenHash);
-        
-            const { error } = await supabase.auth.refreshSession();
-        if (error) console.error("Refresh failed:", error);
-            console.log(email, password, firstname, surname, role, orgID, deptID)
+            // We use emailFromUrl to ensure we use the address the invite was actually sent to
+            await FetchData.AddUser(emailFromUrl, password, firstname, surname, role, orgID, deptID);
 
             setPopupConfig({
                 isOpen: true,
                 type: 'success',
                 title: 'Account Created!',
-                message: "Check your inbox! We've sent a link to verify your email."
+                message: "Your account is ready. Welcome to the system!"
             });
 
         } catch (error) {
-            if(parseInt(error.code) === 23505){
-                setPopupConfig({
-                    isOpen: true,
-                    type: 'error',
-                    title: 'Registration Failed',
-                    message: "Email already in use. Contact your administrator."
-                });
-            } else {
-                setPopupConfig({
-                    isOpen: true,
-                    type: 'error',
-                    title: 'Registration Failed',
-                    message: error.message || "Something went wrong."
-                });
-            }
+            console.error("Signup error:", error);
+            setPopupConfig({
+                isOpen: true,
+                type: 'error',
+                title: 'Registration Failed',
+                message: error.message || "Something went wrong."
+            });
         } finally {
             setIsSubmitting(false);
         }
     }
-
+    
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
             <div className="w-full max-w-2xl bg-white p-8 md:p-12 rounded-3xl shadow-2xl border border-gray-100">
