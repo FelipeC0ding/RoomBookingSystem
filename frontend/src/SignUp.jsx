@@ -143,7 +143,7 @@ function SignUp() {
             const tokenHash = urlParams.get('token_hash'); // Ensure this matches your Email Template key
             const emailFromUrl = urlParams.get('email');
             console.log(emailFromUrl)
-            const { error: verifyError } = await supabase.auth.verifyOtp({
+            const {data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
                 token_hash: tokenHash,
                 type: 'invite',
             });
