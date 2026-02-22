@@ -116,7 +116,6 @@ function SignUp() {
         if (e) e.preventDefault();
         setIsSubmitting(true);
 
-        // 1. KEEP: Password Match Check
         if (password !== passwordConfirm) {
             setPopupConfig({
                 isOpen: true,
@@ -128,7 +127,6 @@ function SignUp() {
             return;
         }
 
-        // 2. KEEP: Password Strength Check
         if (!isStrong) {
             setPopupConfig({
                 isOpen: true,
@@ -141,12 +139,10 @@ function SignUp() {
         }
 
         try {
-            // 3. Get Token from URL (Durable Link Strategy)
             const urlParams = new URLSearchParams(window.location.search);
             const tokenHash = urlParams.get('token_hash'); // Ensure this matches your Email Template key
             const emailFromUrl = urlParams.get('email');
-
-            // 4. VERIFY THE TOKEN (This spends the token ONLY when they click the button)
+            console.log(emailFromUrl)
             const { error: verifyError } = await supabase.auth.verifyOtp({
                 token_hash: tokenHash,
                 type: 'invite',
@@ -154,19 +150,16 @@ function SignUp() {
 
             if (verifyError) throw new Error("Invite link is invalid or expired. Please contact your admin.");
 
-            // 5. UPDATE PASSWORD (The user is now logged in via verifyOtp)
             const { error: passwordError } = await supabase.auth.updateUser({
                 password: password
             });
 
             if (passwordError) throw passwordError;
 
-            // 6. DB INSERTS (Using your existing DAL logic)
             const orgID = await FetchData.GetOrganisationID(selectedSchool);
             const deptID = await FetchData.GetDepartmentID(selectedDepartment);
 
-            // We use emailFromUrl to ensure we use the address the invite was actually sent to
-            await FetchData.AddUser(emailFromUrl, password, firstname, surname, role, orgID, deptID,tokenHash);
+            await FetchData.AddUser(emailFromUrl, password, firstname, surname, role, orgID, deptID);
 
             setPopupConfig({
                 isOpen: true,

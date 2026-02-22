@@ -2,7 +2,7 @@ import { data } from 'autoprefixer';
 import { supabase } from '../supabaseClient';
 export default class FetchDAL {
 
-    static async AddUser(email, password, firstname, surname, role, OrganisationID, departmentID,tokenHash) {
+    static async AddUser(email, password, firstname, surname, role, OrganisationID, departmentID) {
         console.log("--- Executing Supabase Insert ---");
         try {
             
