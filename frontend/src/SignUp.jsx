@@ -56,10 +56,6 @@ function SignUp() {
         };
         const setupUser = async (session) => {
             
-
-            if (error) {
-                alert("Error setting password: " + error.message);
-
             setEmail(session.user.email);
             try {
                 const schoolData = await FetchData.GetSchools();
@@ -70,7 +66,7 @@ function SignUp() {
                 setLoading(false);
                 // Don't navigate away! You want them to fill out the form here.
             }
-        }
+        
         };
         initPage();
 
