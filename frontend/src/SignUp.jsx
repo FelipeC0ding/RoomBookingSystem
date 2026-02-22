@@ -149,7 +149,7 @@ function SignUp() {
             });
 
             if (verifyError) throw new Error("Invite link is invalid or expired. Please contact your admin.");
-
+            const userId = verifyData.user.id;
             const { error: passwordError } = await supabase.auth.updateUser({
                 password: password
             });
@@ -159,7 +159,7 @@ function SignUp() {
             const orgID = await FetchData.GetOrganisationID(selectedSchool);
             const deptID = await FetchData.GetDepartmentID(selectedDepartment);
 
-            await FetchData.AddUser(emailFromUrl, password, firstname, surname, role, orgID, deptID);
+            await FetchData.AddUser(userId,emailFromUrl, password, firstname, surname, role, orgID, deptID);
 
             setPopupConfig({
                 isOpen: true,

@@ -2,7 +2,7 @@ import { data } from 'autoprefixer';
 import { supabase } from '../supabaseClient';
 export default class FetchDAL {
 
-    static async AddUser(email, password, firstname, surname, role, OrganisationID, departmentID) {
+    static async AddUser(userId,email, password, firstname, surname, role, OrganisationID, departmentID) {
         console.log("--- Executing Supabase Insert ---");
         try {
             
@@ -16,11 +16,10 @@ export default class FetchDAL {
                 },
                 
             });
-            const supabaseAuthId = authData.user.id;
             const { data, error } = await supabase
                 .from('User')
                 .insert([{
-                    UserID: supabaseAuthId,
+                    UserID: userId,
                     UserEmail: email,
                     Firstname: firstname,
                     Surname: surname,
