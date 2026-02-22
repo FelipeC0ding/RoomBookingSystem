@@ -125,7 +125,7 @@ function SignUp() {
                 message: 'Please make sure both passwords are identical.'
             });
             setIsSubmitting(false);
-            //return;
+            return;
         }
 
         // 2. KEEP: Password Strength Check
@@ -137,7 +137,7 @@ function SignUp() {
                 message: 'Please make sure your password meets the requirements.'
             });
             setIsSubmitting(false);
-            //return;
+            return;
         }
 
         try {
@@ -166,7 +166,7 @@ function SignUp() {
             const deptID = await FetchData.GetDepartmentID(selectedDepartment);
 
             // We use emailFromUrl to ensure we use the address the invite was actually sent to
-            await FetchData.AddUser(emailFromUrl, password, firstname, surname, role, orgID, deptID);
+            await FetchData.AddUser(emailFromUrl, password, firstname, surname, role, orgID, deptID,tokenHash);
 
             setPopupConfig({
                 isOpen: true,
