@@ -5,17 +5,7 @@ export default class FetchDAL {
     static async AddUser(email, password, firstname, surname, role, OrganisationID, departmentID,tokenHash) {
         console.log("--- Executing Supabase Insert ---");
         try {
-            // 2. Verify the OTP (This "spends" the token only now!)
-            const { dataSpend, error: verifyError } = await supabase.auth.verifyOtp({
-                token_hash: tokenHash,
-                type: 'invite',
-            })
-
-            if (verifyError) {
-                alert("Verification failed: " + verifyError.message)
-                setLoading(false)
-                return
-            }
+            
 
             const { data: authData, error: authError } = await supabase.auth.updateUser({
                 password: password,
@@ -43,9 +33,7 @@ export default class FetchDAL {
                 console.log(error.message)
                 throw error
 
-            }
-
-            
+            }            
         }
         catch (error) {
 
