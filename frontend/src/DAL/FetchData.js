@@ -41,12 +41,11 @@ export default class FetchDAL {
     };
 
     static async deleteUser(userID) {
-        console.log('toomid for delte', roomID)
-        let id = parseInt(roomID)
+        console.log('Deleting USerIDP:',userID)
         const { error } = await supabase
-            .from('Room')
+            .from('User')
             .delete()
-            .eq('RoomID', id)
+            .eq('UserID',userID)
         if (error) {
             console.log(error.message, error.code)
 
@@ -134,7 +133,21 @@ export default class FetchDAL {
         }
 
     }
+    static async approveUser(userID){
+        console.log('Approving user')
+        try {
+            const { error } = await supabase
+                .from('User')
+                .update({ 'Confirmed': true })
+                .eq('UserID', userID)
+        }
+        catch (error) {
+            console.log(error.message)
+        }
 
+    }
+
+    s
     static async ApproveRequest(userID) {
         console.log('UserID to be approved', userID)
         try {
@@ -146,7 +159,6 @@ export default class FetchDAL {
         catch (error) {
             console.log(error.message)
         }
-
     }
 
     static async DenyRequest(userID) {
