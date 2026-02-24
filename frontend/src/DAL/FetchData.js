@@ -4,6 +4,7 @@ export default class FetchDAL {
 
     static async AddUser(email, password, firstname, surname, role, OrganisationID, departmentID) {
         try {
+            console.log('DATA',email, password, firstname, surname, role, OrganisationID, departmentID)
             const { data: authData, error: authError } = await supabase.auth.updateUser({
                 password: password,
                 data: {
