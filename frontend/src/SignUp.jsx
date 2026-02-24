@@ -159,7 +159,7 @@ function SignUp() {
             const orgID = await FetchData.GetOrganisationID(selectedSchool);
             const deptID = await FetchData.GetDepartmentID(selectedDepartment);
 
-            await FetchData.AddUser(userId,emailFromUrl, password, firstname, surname, role, orgID, deptID);
+            await FetchData.AddUser(emailFromUrl, password, firstname, surname, role, orgID, deptID);
 
             setPopupConfig({
                 isOpen: true,
