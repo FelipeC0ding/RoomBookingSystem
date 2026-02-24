@@ -32,7 +32,7 @@ function Menu(props) {
             if (data && data.length > 0 && !selectedRoomForWeek) {
                 setSelectedRoomForWeek(data[0].RoomID);
             }
-            if (!data || data.length < 1) {
+            if (data === null) {
                 handleErrorMessage('Your account setup is not complete. Contact your admin');
             }
         }
