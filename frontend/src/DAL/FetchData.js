@@ -5,17 +5,6 @@ export default class FetchDAL {
     static async AddUser(userId,email, password, firstname, surname, role, OrganisationID, departmentID) {
         console.log("--- Executing Supabase Insert ---");
         try {
-            
-
-            const { data: authData, error: authError } = await supabase.auth.updateUser({
-                password: password,
-                data: {
-                    organisation_id: OrganisationID,
-                    Firstname: firstname,
-                    Surname: surname,
-                },
-                
-            });
             const { data, error } = await supabase
                 .from('User')
                 .insert([{
@@ -35,13 +24,12 @@ export default class FetchDAL {
             }            
         }
         catch (error) {
-
             console.log('user creation error', error)
         }
     };
 
     static async deleteUser(userID) {
-        console.log('toomid for delte', roomID)
+        console.log('roomid for delte', roomID)
         let id = parseInt(roomID)
         const { error } = await supabase
             .from('Room')
