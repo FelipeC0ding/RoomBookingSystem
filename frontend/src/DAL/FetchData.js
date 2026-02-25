@@ -2,30 +2,12 @@ import { data } from 'autoprefixer';
 import { supabase } from '../supabaseClient';
 export default class FetchDAL {
 
-    static async AddUser(email, password, firstname, surname, role, OrganisationID, departmentID) {
+    static async AddUser(userID,email, password, firstname, surname, role, OrganisationID, departmentID) {
         try {
-            const { data, error } = await supabase
-            console.log('DATA',email, password, firstname, surname, role, OrganisationID, departmentID)
-            const { data: authData, error: authError } = await supabase.auth.updateUser({
-                password: password,
-                data: {
-                    organisation_id: OrganisationID,
-                    Firstname: firstname,
-                    Surname: surname,
-                },
-            });
-
-            if (authError) {
-                console.error("AUTH UPDATE FAILED:", authError.message);
-                throw authError;
-            }
-
-            console.log("Auth updated successfully for:", authData.user.id);
-
             const { error: dbError } = await supabase
                 .from('User')
                 .insert([{
-                    UserID: authData.user.id,
+                    UserID: userID,
                     UserEmail: email,
                     Firstname: firstname,
                     Surname: surname,
