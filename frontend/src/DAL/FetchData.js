@@ -2,7 +2,7 @@ import { data } from 'autoprefixer';
 import { supabase } from '../supabaseClient';
 export default class FetchDAL {
 
-    static async AddUser(userID,email, password, firstname, surname, role, OrganisationID, departmentID) {
+    static async AddUser(userID,email, firstname, surname, role, OrganisationID, departmentID) {
         try {
             const { error: dbError } = await supabase
                 .from('User')
@@ -26,21 +26,7 @@ export default class FetchDAL {
             console.error('User creation flow interrupted:', error.message);
         }
     }
-
-    static async deleteUser(userID) {
-        console.log('roomid for delte', roomID)
-        let id = parseInt(roomID)
-        console.log('Deleting USerIDP:',userID)
-        const { error } = await supabase
-            .from('User')
-            .delete()
-            .eq('UserID',userID)
-        if (error) {
-            console.log(error.message, error.code)
-
-        }
-    }
-
+    
     static async getAllUsers() {
         const { data, error } = await supabase
             .from('User')

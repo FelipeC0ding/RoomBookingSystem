@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import fetchData from './DAL/FetchData';
-import { 
-  ArrowLeft, UserMinus, ShieldCheck, ShieldAlert, 
-  CheckCircle, XCircle, Users 
-} from 'lucide-react';
+import {ArrowLeft, UserMinus} from 'lucide-react';
 import { supabase } from './supabaseClient';
 
 function ManageUsers({ onGoBack }) {
@@ -74,7 +71,6 @@ function ManageUsers({ onGoBack }) {
     }
 
     const handleDeleteUser = async (userId) => {
-        await fetchData.deleteUser(userId);
         const {data,error} = await supabase.functions.invoke('delete-user',{
             body: {UserID:userId},
         })
