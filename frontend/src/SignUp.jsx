@@ -335,17 +335,6 @@ function SignUp() {
                                 "Create Account"
                             )}
                         </button>
-                        <div
-                            type="button"
-                            className="
-                                w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl
-                                text-gray-500 font-semibold transition-all duration-200
-                                hover:bg-gray-100 hover:text-gray-700 focus:outline-none
-                            "
-                        >
-                            <ArrowLeft size={18} />
-                            Already have an account? <Link to="/LoginPage">Log in</Link>
-                        </div>
                     </div>
                 </form>
             </div>

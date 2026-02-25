@@ -57,10 +57,11 @@ function Menu(props) {
     const loadData = async () => {
         setIsLoading(true);
         const activeRoomID = selectedRoomForWeek || (rooms.length > 0 ? rooms[0].RoomID : null);
-        if (!activeRoomID) {
+        if (!activeRoomID && props.viewType === 'week') {
             setIsLoading(false);
             return;
         }
+
         try {
             let data = [];
             if (props.viewType === 'week') {
@@ -71,8 +72,10 @@ function Menu(props) {
                 data = await fetchData.fetchBookings(props.viewDate, props.viewType);
             }
             setBookings([...(data || [])]);
+        } catch (error) {
+            console.error("Failed to load bookings", error);
         } finally {
-            setIsLoading(false);
+            setTimeout(() => setIsLoading(false), 300);
         }
     };
 
@@ -106,9 +109,9 @@ function Menu(props) {
                             <h1 className="text-xl font-light text-slate-800 tracking-tight">Main <span className="font-semibold text-blue-600">Menu</span></h1>
                         </div>
                         <div className="hidden sm:flex flex-col items-end">
-                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Active Session</span>
-                            <span className="text-xs font-semibold text-slate-600">
-                                {new Date(props.viewDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Today's Date:</span>
+                            <span className="text-xl font-semibold text-slate-600">
+                                {new Date(props.viewDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}
                             </span>
                         </div>
                     </div>
@@ -168,71 +171,79 @@ function Menu(props) {
             </div>
 
             <div className="w-full flex-1 overflow-auto p-6 flex justify-center">
-                <div className="inline-flex bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden h-fit">
-                    <div className="w-24 bg-gray-50/50 border-r border-gray-200 flex-shrink-0">
-                        <div className="h-12 border-b border-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50">
-                            Time
-                        </div>
-                        {props.timePeriods.map((time, i) => (
-                            <div key={i} className="h-20 border-b border-gray-100 flex items-center justify-center text-[11px] font-bold text-gray-500">
-                                {time}
-                            </div>
-                        ))}
+                {isLoading ? (
+                    /* The Loading Animation */
+                    <div className="flex flex-col items-center justify-center py-40">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                        <p className="text-slate-500 font-medium animate-pulse">Fetching schedule...</p>
                     </div>
-
-                    {(props.viewType === 'day' ? filteredRooms : weekDays).map((item, colIdx) => {
-                        const isDay = props.viewType === 'day';
-                        const currentRoomID = isDay ? item.RoomID : selectedRoomForWeek;
-                        const currentDate = isDay ? props.viewDate : item;
-
-                        return (
-                            <div key={colIdx} className="w-64 border-r border-gray-200 last:border-r-0 flex-shrink-0">
-                                <div className="h-12 border-b border-gray-200 bg-white flex flex-col items-center justify-center px-4">
-                                    <span className="text-xs font-bold text-slate-800 uppercase tracking-tight truncate w-full text-center">
-                                        {isDay ? item.RoomName : new Date(item).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}
-                                    </span>
-                                    {isDay && <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">{item.Capacity} Seats</span>}
-                                </div>
-
-                                {props.timePeriods.map((range, idx) => {
-                                    const formattedRange = range.substring(0, 5);
-                                    const currentBooking = bookingMap[`${String(currentRoomID)}-${currentDate}-${String(formattedRange)}`];
-
-                                    return (
-                                        <div key={idx} className="h-20 border-b border-gray-50 p-2 flex items-center justify-center">
-                                            {currentBooking ? (
-                                                <div className="w-full h-full bg-slate-800 rounded-lg p-2.5 text-white shadow-sm flex flex-col justify-center border-l-4 border-blue-500 overflow-hidden">
-                                                    <div className="flex items-center gap-1.5 mb-0.5">
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                                                        <span className="text-[10px] font-bold uppercase truncate">{currentBooking.Title}</span>
-                                                    </div>
-                                                    <span className="text-[14px] opacity-60 font-medium truncate ml-3">
-                                                        {currentBooking.User.Firstname} {currentBooking.User.Surname}
-                                                    </span>
-                                                </div>
-                                            ) : (
-                                                <button
-                                                    onClick={() => setPopupConfig({
-                                                        isOpen: true,
-                                                        type: 'success',
-                                                        title: 'Make a booking',
-                                                        message: `Booking for ${currentDate}`,
-                                                        roomID: currentRoomID,
-                                                        targetDate: currentDate,
-                                                        timeDuration: `${range}`
-                                                    })}
-                                                    className="text-[10px] font-bold text-emerald-500 tracking-tight hover:scale-105 transition-transform"
-                                                >
-                                                    + Available
-                                                </button>
-                                            )}
-                                        </div>
-                                    );
-                                })}
+                ) : (
+                    <div className="inline-flex bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden h-fit">
+                        <div className="w-24 bg-gray-50/50 border-r border-gray-200 flex-shrink-0">
+                            <div className="h-12 border-b border-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50">
+                                Time
                             </div>
-                        );
-                    })}
-                </div>
+                            {props.timePeriods.map((time, i) => (
+                                <div key={i} className="h-20 border-b border-gray-100 flex items-center justify-center text-[11px] font-bold text-gray-500">
+                                    {time}
+                                </div>
+                            ))}
+                        </div>
+
+                        {(props.viewType === 'day' ? filteredRooms : weekDays).map((item, colIdx) => {
+                            const isDay = props.viewType === 'day';
+                            const currentRoomID = isDay ? item.RoomID : selectedRoomForWeek;
+                            const currentDate = isDay ? props.viewDate : item;
+
+                            return (
+                                <div key={colIdx} className="w-64 border-r border-gray-200 last:border-r-0 flex-shrink-0">
+                                    <div className="h-12 border-b border-gray-200 bg-white flex flex-col items-center justify-center px-4">
+                                        <span className="text-xs font-bold text-slate-800 uppercase tracking-tight truncate w-full text-center">
+                                            {isDay ? item.RoomName : new Date(item).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}
+                                        </span>
+                                        {isDay && <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">{item.Capacity} Seats</span>}
+                                    </div>
+
+                                    {props.timePeriods.map((range, idx) => {
+                                        const formattedRange = range.substring(0, 5);
+                                        const currentBooking = bookingMap[`${String(currentRoomID)}-${currentDate}-${String(formattedRange)}`];
+
+                                        return (
+                                            <div key={idx} className="h-20 border-b border-gray-50 p-2 flex items-center justify-center">
+                                                {currentBooking ? (
+                                                    <div className="w-full h-full bg-slate-800 rounded-lg p-2.5 text-white shadow-sm flex flex-col justify-center border-l-4 border-blue-500 overflow-hidden">
+                                                        <div className="flex items-center gap-1.5 mb-0.5">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                                                            <span className="text-[10px] font-bold uppercase truncate">{currentBooking.Title}</span>
+                                                        </div>
+                                                        <span className="text-[14px] opacity-60 font-medium truncate ml-3">
+                                                            {currentBooking.User.Firstname} {currentBooking.User.Surname}
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => setPopupConfig({
+                                                            isOpen: true,
+                                                            type: 'success',
+                                                            title: 'Make a booking',
+                                                            message: `Booking for ${currentDate}`,
+                                                            roomID: currentRoomID,
+                                                            targetDate: currentDate,
+                                                            timeDuration: `${range}`
+                                                        })}
+                                                        className="text-[10px] font-bold text-emerald-500 tracking-tight hover:scale-105 transition-transform"
+                                                    >
+                                                        + Available
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
             <PopUp

@@ -29,7 +29,6 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
   { label: "4th", value: 4 }
 ];
   const weekdays = {0:'Sunday', 1:'Monday', 2:'Tuesday', 3:'Wednesday', 4:'Thursday', 5:'Friday', 6:'Saturday'};
-  const [isSubmitting, setIsSubmitting] = useState(false);
   useEffect(() => {
     const dateObj = new Date(bookingDate);
     const dayIndex = dateObj.getDay(); 
