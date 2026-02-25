@@ -72,7 +72,7 @@ function ManageUsers({ onGoBack }) {
 
     const handleDeleteUser = async (userId) => {
         const {data,error} = await supabase.functions.invoke('delete-user',{
-            body: {UserID:userId},
+            body: {userID:userId},
         })
         setUsers(prev => prev.filter(u => u.UserID !== userId));
         setConfirmingDeleteId(null);
