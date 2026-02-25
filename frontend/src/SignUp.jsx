@@ -116,68 +116,57 @@ function SignUp() {
         if (e) e.preventDefault();
         setIsSubmitting(true);
 
+        // 1. Validations (Keep these as they are)
         if (password !== passwordConfirm) {
-            setPopupConfig({
-                isOpen: true,
-                type: 'error',
-                title: 'Passwords Mismatch',
-                message: 'Please make sure both passwords are identical.'
-            });
+            setPopupConfig({ isOpen: true, type: 'error', title: 'Mismatch', message: 'Passwords must match.' });
             setIsSubmitting(false);
             return;
         }
-
         if (!isStrong) {
-            setPopupConfig({
-                isOpen: true,
-                type: 'error',
-                title: 'Password is weak',
-                message: 'Please make sure your password meets the requirements.'
-            });
+            setPopupConfig({ isOpen: true, type: 'error', title: 'Weak Password', message: 'Requirements not met.' });
             setIsSubmitting(false);
             return;
         }
 
         try {
             const urlParams = new URLSearchParams(window.location.search);
-            const tokenHash = urlParams.get('token_hash'); // Ensure this matches your Email Template key
+            const tokenHash = urlParams.get('token_hash') || urlParams.get('token');
             const emailFromUrl = urlParams.get('email');
-            console.log(emailFromUrl)
-            const {data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+
+            const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
                 token_hash: tokenHash,
                 type: 'invite',
             });
+            if (verifyError) throw new Error("Invite link invalid. Contact admin.");
 
-            if (verifyError) throw new Error("Invite link is invalid or expired. Please contact your admin.");
-            const { error: passwordError } = await supabase.auth.updateUser({
-                password: password
-            });
-
-            if (passwordError) throw passwordError;
-            
-            const userId = verifyData.user.id;
             const orgID = await FetchData.GetOrganisationID(selectedSchool);
             const deptID = await FetchData.GetDepartmentID(selectedDepartment);
 
             const { data: authData, error: authError } = await supabase.auth.updateUser({
                 password: password,
                 data: {
-                    organisation_id: OrganisationID,
+                    organisation_id: orgID,
                     Firstname: firstname,
                     Surname: surname,
-                },
-                
+                }
             });
-            if(authError) throw verifyError;
+            if (authError) throw authError;
 
-            await FetchData.AddUser(userId,emailFromUrl, password, firstname, surname, role, orgID, deptID);
-            await FetchData.AddUser(emailFromUrl, password, firstname, surname, role, orgID, deptID);
+            await FetchData.AddUser(
+                verifyData.user.id, 
+                emailFromUrl, 
+                firstname, 
+                surname, 
+                role, 
+                orgID, 
+                deptID
+            );
 
             setPopupConfig({
                 isOpen: true,
                 type: 'success',
                 title: 'Account Created!',
-                message: "Your account is ready. Welcome to the system!"
+                message: "Welcome to the system!"
             });
 
         } catch (error) {
@@ -186,7 +175,7 @@ function SignUp() {
                 isOpen: true,
                 type: 'error',
                 title: 'Registration Failed',
-                message: error.message || "Something went wrong."
+                message: error.message
             });
         } finally {
             setIsSubmitting(false);
