@@ -171,6 +171,7 @@ function SignUp() {
             if(authError) throw verifyError;
 
             await FetchData.AddUser(userId,emailFromUrl, password, firstname, surname, role, orgID, deptID);
+            await FetchData.AddUser(emailFromUrl, password, firstname, surname, role, orgID, deptID);
 
             setPopupConfig({
                 isOpen: true,

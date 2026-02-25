@@ -2,39 +2,59 @@ import { data } from 'autoprefixer';
 import { supabase } from '../supabaseClient';
 export default class FetchDAL {
 
-    static async AddUser(userId,email, password, firstname, surname, role, OrganisationID, departmentID) {
-        console.log("--- Executing Supabase Insert ---");
+    static async AddUser(email, password, firstname, surname, role, OrganisationID, departmentID) {
         try {
+
             const { data, error } = await supabase
+
+            console.log('DATA',email, password, firstname, surname, role, OrganisationID, departmentID)
+            const { data: authData, error: authError } = await supabase.auth.updateUser({
+                password: password,
+                data: {
+                    organisation_id: OrganisationID,
+                    Firstname: firstname,
+                    Surname: surname,
+                },
+            });
+
+            if (authError) {
+                console.error("AUTH UPDATE FAILED:", authError.message);
+                throw authError;
+            }
+
+            console.log("Auth updated successfully for:", authData.user.id);
+
+            const { error: dbError } = await supabase
                 .from('User')
                 .insert([{
-                    UserID: userId,
+                    UserID: authData.user.id,
                     UserEmail: email,
                     Firstname: firstname,
                     Surname: surname,
                     Role: role,
                     DepartmentID: departmentID,
-                    OrganisationID: OrganisationID
+                    OrganisationID: OrganisationID,
+                    Confirmed: false
                 }]);
 
-            if (error) {
-                console.log(error.message)
-                throw error
+            if (dbError) throw dbError;
 
-            }            
         }
         catch (error) {
             console.log('user creation error', error)
+
+            console.error('User creation flow interrupted:', error.message);
         }
-    };
+    }
 
     static async deleteUser(userID) {
         console.log('roomid for delte', roomID)
         let id = parseInt(roomID)
+        console.log('Deleting USerIDP:',userID)
         const { error } = await supabase
-            .from('Room')
+            .from('User')
             .delete()
-            .eq('RoomID', id)
+            .eq('UserID',userID)
         if (error) {
             console.log(error.message, error.code)
 
@@ -122,7 +142,21 @@ export default class FetchDAL {
         }
 
     }
+    static async approveUser(userID){
+        console.log('Approving user')
+        try {
+            const { error } = await supabase
+                .from('User')
+                .update({ 'Confirmed': true })
+                .eq('UserID', userID)
+        }
+        catch (error) {
+            console.log(error.message)
+        }
 
+    }
+
+    s
     static async ApproveRequest(userID) {
         console.log('UserID to be approved', userID)
         try {
@@ -134,7 +168,6 @@ export default class FetchDAL {
         catch (error) {
             console.log(error.message)
         }
-
     }
 
     static async DenyRequest(userID) {
@@ -470,20 +503,22 @@ export default class FetchDAL {
         } else {
             console.log('SUCCESS:', data);
         }
-
         return data
-
     }
 
     static async getRooms(){
         console.log('Getting Rooms')
+        let userConfirmed = await this.getCurrentUser()
+        console.log('User Object:', userConfirmed);
+        let orgID = userConfirmed.OrganisationID
+        userConfirmed = userConfirmed.Confirmed
+
         const{data, error} = await supabase
             .from('Room')
             .select('*')
             .eq('IsAvailable', true)
-        let userConfirmed = await this.getCurrentUser()
-        console.log('User Object:', userConfirmed);
-        userConfirmed = userConfirmed.Confirmed
+            .eq('OrganisationID', orgID)
+
         if (error) {
             console.log(error.message, error.code)
         } else {
@@ -493,13 +528,11 @@ export default class FetchDAL {
            return data
         }
         else{
-            return []
-
+            return null
         }
     }
 
     static async AddNewRoom(title, location, capacity, features) {
-
         try {
             let capacityFormatted = parseInt(capacity);
             let orgID = await this.loggedInOrgID();

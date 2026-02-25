@@ -11,7 +11,7 @@ function ManageUsers({ onGoBack }) {
     const [users, setUsers] = useState([]);
     const [confirmingAdminId, setConfirmingAdminId] = useState(null);
     const [confirmingDeleteId, setConfirmingDeleteId] = useState(null);
-
+    const [currentUser, setCurrentUser] = useState('')
     useEffect(() => {
         async function getUsers() {
             const data = await fetchData.getAllUsers();
@@ -24,12 +24,18 @@ function ManageUsers({ onGoBack }) {
     const pendingList = users.filter(u => !u.Confirmed);
     const displayedUsers = activeTab === 'active' ? activeList : pendingList;
 
-    const handleApprove = async()=>{
-
-    }
+    const handleApprove = async (userID) => {
+        await fetchData.approveUser(userID);
+        setUsers(prev => prev.map(u =>
+            u.UserID === userID ? { ...u, Confirmed: true } : u
+        ));
+    };
 
     const handleDeny = async()=>{
-        
+        await fetchData.deleteUser(userID);
+        setUsers(prev => prev.map(u =>
+            u.UserID === userID ? { ...u, Confirmed: true } : u
+        ));
     }
     const handleToggleAdmin = async (user) => {
         if (!user) {
@@ -69,6 +75,9 @@ function ManageUsers({ onGoBack }) {
 
     const handleDeleteUser = async (userId) => {
         await fetchData.deleteUser(userId);
+        const {data,error} = await supabase.functions.invoke('delete-user',{
+            body: {UserID:userId},
+        })
         setUsers(prev => prev.filter(u => u.UserID !== userId));
         setConfirmingDeleteId(null);
     };
@@ -211,13 +220,16 @@ function ManageUsers({ onGoBack }) {
                                             ) : (
                                                 /* Pending Tab Logic */
                                                 <div className="flex gap-2">
-                                                    <button className="flex items-center gap-1 px-4 py-2 bg-green-50 text-green-700 rounded-xl font-black text-[10px] hover:bg-green-600 hover:text-white transition-all ring-1 ring-green-200"
-                                                        onClick={handleApprove}
+                                                    <button
+                                                        className="flex items-center gap-1 px-4 py-2 bg-green-50 text-green-700 rounded-xl font-black text-[10px] hover:bg-green-600 hover:text-white transition-all ring-1 ring-green-200"
+                                                        onClick={() => handleApprove(user.UserID)} // Use user.UserID from the map function
                                                     >
                                                         Approve
                                                     </button>
-                                                    <button className="flex items-center gap-1 px-4 py-2 bg-red-50 text-red-700 rounded-xl font-black text-[10px] hover:bg-red-600 hover:text-white transition-all ring-1 ring-red-200"
-                                                        onClick={handleDeny}
+
+                                                    <button
+                                                        className="flex items-center gap-1 px-4 py-2 bg-red-50 text-red-700 rounded-xl font-black text-[10px] hover:bg-red-600 hover:text-white transition-all ring-1 ring-red-200"
+                                                        onClick={() => handleDeleteUser(user.UserID)} // Usually "Deny" for a new request is just deleting the record
                                                     >
                                                         Deny
                                                     </button>
