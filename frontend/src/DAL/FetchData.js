@@ -150,35 +150,55 @@ export default class FetchDAL {
 
     }
 
-    static async createDailyBooking(userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked) {
+    static async createDailyBooking(userID, description, roomID, startBookingDate, duration, title, recurrenceLength, dateBooked) {
         const timings = duration.split(" - ");
-        let date = new Date(bookingDate);
+        let checkDate = new Date(startBookingDate);
+        let datesToBook = [];
 
-        console.log('DAILY DATA:', userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked)
-        for (let index = 0; index < recurrenceLength; index++) {
-
-            if (this.isWeekend(date)) {
-                let jump = (date.getDay() === 6 || date.getDay() === 0) ? 2 : 1;
-                date.setDate(date.getDate() + jump);
+        while (datesToBook.length < recurrenceLength) {
+            if (this.isWeekend(checkDate)) {
+                let jump = (checkDate.getDay() === 6) ? 2 : 0;
+                checkDate.setDate(checkDate.getDate() + jump);
             }
-
-            const { error } = await supabase
-                .from('Booking')
-                .insert({
-                    Description: description,
-                    RoomID: roomID,
-                    UserID: userID,
-                    BookingDate: date.toISOString().split('T')[0],
-                    BookingStartTime: timings[0],
-                    BookingEndTime: timings[1],
-                    CreatedTimeStamp: dateBooked,
-                    Title: title
-                });
-
-            if (error) throw error;
-
-            date.setDate(date.getDate() + 1);
+            datesToBook.push(checkDate.toISOString().split('T')[0]);
+            checkDate.setDate(checkDate.getDate() + 1);
         }
+
+        const { data, error: checkError } = await supabase
+            .from('Booking')
+            .select('BookingDate')
+            .eq('RoomID', parseInt(roomID))
+            .eq('BookingStartTime', timings[0] + ':00')
+            .in('BookingDate', datesToBook); 
+
+        if (checkError) return false;
+        if (data && data.length > 0) {
+            console.log("Conflicts found on:", data);
+            return false;
+        }
+
+
+        const rowsToInsert = datesToBook.map(dateStr => ({
+            Description: description,
+            RoomID: roomID,
+            UserID: userID,
+            BookingDate: dateStr,
+            BookingStartTime: timings[0],
+            BookingEndTime: timings[1],
+            CreatedTimeStamp: dateBooked,
+            Title: title
+        }));
+
+        const { error: insertError } = await supabase
+            .from('Booking')
+            .insert(rowsToInsert);
+
+        if (insertError) {
+            console.error("Bulk insert failed:", insertError);
+            return false;
+        }
+
+        return true;
     }
     static async createMonthlyRecurringBooking(description, roomID, bookingDate, duration, title, frequency, recurrenceLength, monthlyOrdinal, monthlyWeekday, monthlyType) {
         const timings = duration.split(" - ");
@@ -267,6 +287,7 @@ export default class FetchDAL {
 
     static async createRecurringBooking(description, roomID, bookingDate, duration, title, frequency, recurrenceLength) {
         try {
+            let bookingCreated = true
             let user = await this.getUserData();
             let userID = user.id;
             const dateBooked = new Date().toISOString().split('T')[0];
@@ -276,7 +297,8 @@ export default class FetchDAL {
             if (freq === 'daily') {
                 spacing = 1;
                 console.log('Processing Daily');
-                await this.createDailyBooking(userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked);
+                bookingCreated = await this.createDailyBooking(userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked);
+                return bookingCreated
             }
             else if (freq === 'weekly') {
                 spacing = 7;

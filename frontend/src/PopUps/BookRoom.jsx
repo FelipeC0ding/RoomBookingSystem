@@ -1,6 +1,7 @@
 import React,{ useState, useEffect } from 'react';
 import { ChevronDown ,Repeat,Minus, Plus,CheckCircle2, AlertCircle, X, BookOpen, AlignLeft } from 'lucide-react';
 import fetchData from '../DAL/FetchData'
+import ErrorPopup from './ErrorPopUp';
 const INPUT_STYLE = `
   w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200
   rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500
@@ -22,6 +23,8 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
   const [monthlyType, setMonthlyType] = useState('date'); 
   const [monthlyOrdinal, setMonthlyOrdinal] = useState(1);
   const [monthlyWeekday ,setMonthlyWeekday] = useState(1)
+  const [errorPopUp, setErrorPopup] = useState(false)
+  const[errorMessage, setErrorMessage] = useState('')
   const ordinals = [
   { label: "1st", value: 1 },
   { label: "2nd", value: 2 },
@@ -38,6 +41,7 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
     setMonthlyWeekday(dayIndex);
     setMonthlyOrdinal(weekNum > 4 ? 4 : weekNum); 
 }, [bookingDate]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
       <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl transform animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 border border-white/20">
@@ -213,6 +217,7 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
           <button
             onClick={async ()=> 
               {
+                let booked = true
                 if(isRecurring){
                   if(frequency === 'Monthly' && monthlyType === 'ordinal'){
                     await fetchData.createMonthlyRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength, monthlyOrdinal, monthlyWeekday,monthlyType);
@@ -222,13 +227,22 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
                       await fetchData.createMonthlyRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength, monthlyOrdinal, monthlyWeekday,monthlyType);
                   }
                   else{
-                    await fetchData.createRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength);
+                    booked = await fetchData.createRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength);
+                    console.log("Booking Result:", booked);
+                    if(!booked){
+                      setErrorPopup(true)
+                      setErrorMessage('Booking could not be created. Have any of these dates already been booked?')
+                      return booked;
+                    }
+                    onClose();
+                   
                   }
               }
               else{
                 await fetchData.createBooking(description, roomID, bookingDate, timeDuration, bookingTitle);
-              }
                 onClose();
+
+              }
             }}
             className={`w-full py-4 px-6 font-bold rounded-2xl transition-all shadow-lg shadow-blue-200 active:scale-[0.98] ${
               isSuccess ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700'
@@ -245,6 +259,11 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
           </button>
         </div>
       </div>
+        <ErrorPopup 
+          isOpen={errorPopUp} 
+          message={errorMessage} 
+          onClose={() => setErrorPopup(false)} 
+        />
     </div>
   );
 }
