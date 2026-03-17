@@ -218,13 +218,27 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
             onClick={async ()=> 
               {
                 let booked = true
-                if(isRecurring){
+                if(isRecurring)
+                {
                   if(frequency === 'Monthly' && monthlyType === 'ordinal'){
-                    await fetchData.createMonthlyRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength, monthlyOrdinal, monthlyWeekday,monthlyType);
+                    booked = await fetchData.createMonthlyRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength, monthlyOrdinal, monthlyWeekday,monthlyType);
                     console.log(monthlyOrdinal, monthlyWeekday,monthlyType)
+                    console.log("Booking Result:", booked);
+                    if(!booked){
+                      setErrorPopup(true)
+                      setErrorMessage('Booking could not be created. Have any of these dates already been booked?')
+                      return booked;
+                    }
+                    onClose();
                   }
                   else if(frequency === 'Monthly' && monthlyType === 'fixed'){
-                      await fetchData.createMonthlyRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength, monthlyOrdinal, monthlyWeekday,monthlyType);
+                    booked = await fetchData.createMonthlyRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength, monthlyOrdinal, monthlyWeekday,monthlyType);
+                    if(!booked){
+                      setErrorPopup(true)
+                      setErrorMessage('Booking could not be created. Have any of these dates already been booked?')
+                      return booked;
+                    }
+                    onClose();
                   }
                   else{
                     booked = await fetchData.createRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength);
@@ -235,13 +249,11 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
                       return booked;
                     }
                     onClose();
-                   
                   }
-              }
-              else{
-                await fetchData.createBooking(description, roomID, bookingDate, timeDuration, bookingTitle);
-                onClose();
-
+                }
+                else{
+                  await fetchData.createBooking(description, roomID, bookingDate, timeDuration, bookingTitle);
+                  onClose();
               }
             }}
             className={`w-full py-4 px-6 font-bold rounded-2xl transition-all shadow-lg shadow-blue-200 active:scale-[0.98] ${
