@@ -212,7 +212,6 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
           </div>
         </div>
 
-        {/* Actions */}
         <div className="space-y-3">
           <button
             onClick={async ()=> 

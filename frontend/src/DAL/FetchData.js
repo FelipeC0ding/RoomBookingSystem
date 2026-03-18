@@ -213,35 +213,36 @@ export default class FetchDAL {
         let user = await this.getUserData();
         let userID = user.id;
         const dateBooked = new Date().toISOString().split('T')[0];
-        let checkDate = new Date(bookingDate);
-        let datesToBook = [];
-
-        console.log('Monthly fixed DATA:', userID, description, roomID, bookingDate, duration, title, recurrenceLength, monthlyOrdinal, monthlyWeekday, monthlyType)
-        console.log(monthlyType)
-
-        while (datesToBook.length < recurrenceLength) {
-            if (this.isWeekend(checkDate)) {
-                let jump = (checkDate.getDay() === 6) ? 2 : 0;
-                checkDate.setDate(checkDate.getDate() + jump);
-            }
-            datesToBook.push(checkDate.toISOString().split('T')[0]);
-            checkDate.setDate(checkDate.getDate() + 1);
-        }
-
-        const { data, error } = await supabase
-            .from('Booking')
-            .select('BookingDate')
-            .eq('RoomID', parseInt(roomID))
-            .eq('BookingStartTime', timings[0] + ':00')
-            .in('BookingDate', datesToBook); 
-
-        if (error) return false;
-        if (data && data.length > 0) {
-            console.log("Conflicts found on:", data);
-            return false;
-        }
 
         if (monthlyType.toLowerCase() === 'fixed') {
+
+            let datesToBook = [];
+            let tempDate = new Date(bookingDate);
+            const originalDay = tempDate.getDate(); // Store the day (e.g., 15)
+
+            for (let i = 0; i < recurrenceLength; i++) {
+                datesToBook.push(tempDate.toISOString().split('T')[0]);
+                tempDate.setMonth(tempDate.getMonth() + 1);
+                if (tempDate.getDate() !== originalDay) {
+                    tempDate.setDate(0); 
+                }
+            }
+
+            console.log('DATES for fixed:', datesToBook)
+
+            const { data, error } = await supabase
+                .from('Booking')
+                .select('BookingDate')
+                .eq('RoomID', parseInt(roomID))
+                .eq('BookingStartTime', timings[0] + ':00')
+                .in('BookingDate', datesToBook); 
+
+            if (error) return false;
+            if (data && data.length > 0) {
+                console.log("Conflicts found on:", data);
+                return false;
+            }
+
             for (let index = 0; index < recurrenceLength; index++) {
                 const { error } = await supabase
                     .from('Booking')
@@ -266,7 +267,7 @@ export default class FetchDAL {
             return true
         }
         else if (monthlyType.toLowerCase() === 'ordinal') {
-            let bookingDates = await this.createSpecificWeekdayBookings(bookingDate, monthlyWeekday, monthlyOrdinal, recurrenceLength);
+            let bookingDates = await this.createOrdinalDates(bookingDate, monthlyWeekday, monthlyOrdinal, recurrenceLength);
             let dateStrings = this.formatDates(bookingDates); 
             
            const { data: conflicts, error: checkError } = await supabase
@@ -274,23 +275,23 @@ export default class FetchDAL {
                 .select('BookingDate')
                 .eq('RoomID', parseInt(roomID))
                 .eq('BookingStartTime', timings[0] + ':00')
-                .in('BookingDate', targetDates);
+                .in('BookingDate', dateStrings);
 
-            if (checkError) return false;
+            if (checkError){
+                console.log(error.message)
+                return false   
+            };
             
-            // If ANY of the dates are taken, we stop here. 
-            // No rows have been inserted yet!
             if (conflicts && conflicts.length > 0) {
                 console.log("Conflicts found on these dates:", conflicts);
                 return false; 
             }
 
-            // --- STEP 3: BULK INSERT (ALL OR NOTHING) ---
-            const rowsToInsert = targetDates.map(dateStr => ({
+            const rowsToInsert = dateStrings.map(dateStrings => ({
                 Description: description,
                 RoomID: roomID,
                 UserID: userID,
-                BookingDate: dateStr,
+                BookingDate: dateStrings,
                 BookingStartTime: timings[0],
                 BookingEndTime: timings[1],
                 CreatedTimeStamp: dateBooked,
@@ -306,40 +307,49 @@ export default class FetchDAL {
                 return false;
             }
 
-            return true; // Success!
+            return true; 
         }
     }
 
-    static createSpecificWeekdayBookings(bookingDate, targetDay, targetOrdinal, recurrenceLength) {
-        let date = new Date(bookingDate);
-        date.setDate(1);
+    static createOrdinalDates(bookingDate, targetDay, targetOrdinal, recurrenceLength) {
+        try{
+            let results = [];
+            let startDay = new Date(bookingDate);
+            
+            let currentYear = startDay.getFullYear();
+            let currentMonth = startDay.getMonth();
 
-        let bookingsCreated = 0;
-        let results = [];
+            for (let i = 0; i < recurrenceLength; i++) {
+                let searchDate = new Date(currentYear, currentMonth, 1);
+                let occurrenceCounter = 0;
+                let foundForThisMonth = false;
 
-        while (bookingsCreated < recurrenceLength) {
-            let occurrenceCounter = 0;
-            let monthFinished = false;
-            let currentMonth = date.getMonth();
+                while (searchDate.getMonth() === currentMonth) {
+                    if (searchDate.getDay() === parseInt(targetDay)) {
+                        occurrenceCounter++;
 
-            while (!monthFinished) {
-                if (date.getDay() === parseInt(targetDay)) {
-                    occurrenceCounter++;
-                    if (occurrenceCounter === parseInt(targetOrdinal)) {
-                        results.push(new Date(date));
-                        bookingsCreated++;
-                        monthFinished = true;
+                        if (occurrenceCounter === parseInt(targetOrdinal)) {
+                            results.push(new Date(searchDate));
+                            foundForThisMonth = true;
+                            break; 
+                        }
                     }
+                    searchDate.setDate(searchDate.getDate() + 1);
                 }
 
-                date.setDate(date.getDate() + 1);
-                if (date.getMonth() !== currentMonth) {
-                    monthFinished = true;
+                currentMonth++;
+                if (currentMonth > 11) {
+                    currentMonth = 0;
+                    currentYear++;
                 }
             }
-            date.setMonth(date.getMonth());
+
+            return results;
         }
-        return results;
+        catch(error){
+            console.log(error.message)
+            return false
+        }
     }
     static async createWeeklyBooking(userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked){
         let spacing = 7;
@@ -714,6 +724,5 @@ export default class FetchDAL {
         catch (error) {
             console.log('deleting user error-', error.message)
         }
-
     }
 }
