@@ -43,11 +43,6 @@ function AdminPage({ onGoBack }) {
                         <ArrowLeft size={20} />
                         <span>Back to Dashboard</span>
                     </button>
-                    
-                    <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full text-blue-700 text-xs font-bold uppercase tracking-wider border border-blue-100">
-                        <Activity size={14} />
-                        System Online
-                    </div>
                 </div>
 
                 <header className="mb-10">
