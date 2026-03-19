@@ -1,89 +1,77 @@
 import React, { useState } from 'react';
-import { Monitor, Users, Settings, ArrowLeft } from 'lucide-react';
+import { Monitor, Users, Settings, ArrowLeft, ChevronRight, Activity } from 'lucide-react';
 import ManageUsers from './ManageUsers';
 import ManageRooms from './ManageRooms';
-import { supabase } from './supabaseClient';
-import FetchData from './DAL/FetchData'
-// Consistent Tailwind-only classes
-const TAB_CLASSES = "flex items-center justify-center gap-3 p-4 bg-white rounded-xl border border-gray-200 cursor-pointer font-semibold text-gray-700 shadow-sm transition-all hover:border-blue-400 hover:shadow-md active:scale-95";
+
+const NavCard = ({ icon: Icon, title, description, color, onClick }) => (
+    <button
+        onClick={onClick}
+        className="group relative flex flex-col items-start p-6 bg-white rounded-2xl border border-slate-200 shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-blue-500 overflow-hidden"
+    >
+        <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-10 transition-transform group-hover:scale-150 ${color}`} />
+        
+        <div className={`p-3 rounded-xl mb-4 transition-colors ${color} bg-opacity-10 text-slate-700 group-hover:bg-opacity-100 group-hover:text-white`}>
+            <Icon size={28} />
+        </div>
+        
+        <div className="text-left">
+            <h3 className="text-xl font-bold text-slate-800 mb-1 leading-tight">{title}</h3>
+            <p className="text-sm text-slate-500 font-medium leading-relaxed">{description}</p>
+        </div>
+
+        <div className="mt-6 flex items-center text-blue-600 font-bold text-sm opacity-0 group-hover:opacity-100 transition-opacity">
+            Manage Now <ChevronRight size={16} className="ml-1" />
+        </div>
+    </button>
+);
 
 function AdminPage({ onGoBack }) {
-    const [manageUsers, setManageUsers] = useState(false)
-    const [manageRooms, setManageRooms] = useState(false)
+    const [view, setView] = useState('menu');
 
-    const handleManageRoomClick = ()=>{
-        setManageRooms(!manageRooms)
-    }
-
-    const onSwitch = () =>{
-
-        setManageRooms(false)
-    }
-
-    if(manageRooms){
-        return <ManageRooms onGoBack={onSwitch} />;
-    }
-    
-    
-    
-    const handleManageUserCLick = ()=>{
-        setManageUsers(!manageUsers)
-    }
-
-    const onclickBack = () =>{
-
-        setManageUsers(false)
-    }
-
-    if(manageUsers){
-        return <ManageUsers onGoBack={onclickBack} />;
-    }
-
+    if (view === 'rooms') return <ManageRooms onGoBack={() => setView('menu')} />;
+    if (view === 'users') return <ManageUsers onGoBack={() => setView('menu')} />;
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
-
-                {/* Header */}
-                <div className="flex items-center justify-between mb-8 border-b border-gray-100 pb-6">
-                    <div>
-                        <h2 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
-                            <Settings className="text-blue-600" /> Admin Panel
-                        </h2>
-                        <p className="text-gray-500 mt-1">System configuration and management</p>
-                    </div>
+        <div className="min-h-screen bg-[#f8fafc] p-4 md:p-12 font-sans text-slate-900">
+            <div className="max-w-5xl mx-auto">
+                
+                <div className="flex items-center justify-between mb-12">
                     <button
                         onClick={onGoBack}
-                        className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-red-600 transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-slate-500 hover:bg-white hover:text-slate-800 hover:shadow-sm transition-all font-semibold"
                     >
-                        <ArrowLeft size={18} /> Back to Menu
+                        <ArrowLeft size={20} />
+                        <span>Back to Dashboard</span>
                     </button>
+                    
+                    <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full text-blue-700 text-xs font-bold uppercase tracking-wider border border-blue-100">
+                        <Activity size={14} />
+                        System Online
+                    </div>
                 </div>
 
-                {/* Management Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-                    <button 
-                        type="button" 
-                        className={TAB_CLASSES}
-                        onClick = {handleManageUserCLick}
-                        >
+                <header className="mb-10">
+                    <h1 className="text-4xl font-black tracking-tight text-slate-900 mb-2">
+                        Admin <span className="text-blue-600">Control Center</span>
+                    </h1>
+                </header>
 
-                        <Users size={24} className="text-blue-500" />
-                        <span>Manage Users</span>
-                    </button>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <NavCard 
+                        icon={Users}
+                        title=" Manage Users"
+                        description="Modify permissions, reset passwords, and audit user activity logs."
+                        color="bg-blue-600"
+                        onClick={() => setView('users')}
+                    />
 
-                    <button 
-                        type="button" 
-                        onClick={handleManageRoomClick} 
-                        className={TAB_CLASSES}>
-                        <Monitor size={24} className="text-green-500" />
-                        <span>Manage Rooms</span>
-                    </button>
-{/* 
-                    <button type="button" onClick={onGoBack} className={TAB_CLASSES}>
-                        <Settings size={24} className="text-purple-500" />
-                        <span>System Settings</span>
-                    </button> */}
+                    <NavCard 
+                        icon={Monitor}
+                        title="Manage Rooms"
+                        description="Add new spaces, configure hardware specs, and set room capacities."
+                        color="bg-emerald-500"
+                        onClick={() => setView('rooms')}
+                    />
                 </div>
             </div>
         </div>
