@@ -2,8 +2,9 @@ import { data } from 'autoprefixer';
 import { supabase } from '../supabaseClient';
 export default class FetchDAL {
 
-    static async AddUser(userID,email, firstname, surname, role, OrganisationID, departmentID) {
+    static async AddUser(userID,email, firstname, surname, OrganisationID, departmentID) {
         try {
+            const role = 'standard'
             const { error: dbError } = await supabase
                 .from('User')
                 .insert([{

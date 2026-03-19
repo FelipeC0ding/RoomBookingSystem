@@ -26,7 +26,6 @@ function SignUp() {
     const [firstname, setFirstname] = useState('');
     const [surname, setSurname] = useState('');
     const [email, setEmail] = useState('');
-    const [role, setRole] = useState('standard'); // Default role
     const [password, setPassword] = useState('');
     const [passwordConfirm, setPasswordConfirm] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -157,7 +156,6 @@ function SignUp() {
                 emailFromUrl, 
                 firstname, 
                 surname, 
-                role, 
                 orgID, 
                 deptID
             );
@@ -212,35 +210,10 @@ function SignUp() {
                                     <input type="text" placeholder="Doe" required className={INPUT_STYLE} onChange={(e) => setSurname(e.target.value)} />
                                 </div>
                             </div>
-                            <div className="space-y-1">
-                                <label className="text-sm font-semibold text-gray-700 ml-1">Email Address</label>
-                                <div className={INPUT_CONTAINER}>
-                                    <Mail size={18} className={ICON_STYLE} />
-                                    <input type="email" placeholder="jane.doe@school.edu" autoComplete="off" required className={INPUT_STYLE} onChange={(e) => setEmail(e.target.value)} />
-                                </div>
-                            </div>
                         </div>
 
                         <div className="space-y-4">
                             <h3 className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-2">Work</h3>
-                            
-                            {/* Role Selection Dropdown */}
-                            <div className="space-y-1">
-                                <label className="text-sm font-semibold text-gray-700 ml-1">Account Role</label>
-                                <div className={INPUT_CONTAINER}>
-                                    <ShieldCheck size={18} className={ICON_STYLE} />
-                                    <select
-                                        value={role}
-                                        onChange={(e) => setRole(e.target.value)}
-                                        className={INPUT_STYLE}
-                                        required
-                                    >
-                                        <option value="standard">Standard</option>
-                                        <option value="admin">Admin</option>
-                                    </select>
-                                </div>
-                            </div>
-
                             <div className="space-y-1">
                                 <label className="text-sm font-semibold text-gray-700 ml-1">School</label>
                                 <div className={INPUT_CONTAINER}>
