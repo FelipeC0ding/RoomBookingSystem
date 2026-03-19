@@ -79,11 +79,11 @@ function AdminPage({ onGoBack }) {
                         <Monitor size={24} className="text-green-500" />
                         <span>Manage Rooms</span>
                     </button>
-
+{/* 
                     <button type="button" onClick={onGoBack} className={TAB_CLASSES}>
                         <Settings size={24} className="text-purple-500" />
                         <span>System Settings</span>
-                    </button>
+                    </button> */}
                 </div>
             </div>
         </div>
