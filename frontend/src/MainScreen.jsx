@@ -39,13 +39,14 @@ function Menu(props) {
         getRoomsToDisplay();
     }, []);
 
+    // FIX: Changed 'targetDate' to 'bookingDate' to match the PopUp props exactly
     const [popupConfig, setPopupConfig] = useState({
         isOpen: false,
         type: 'success',
         title: '',
         message: '',
         roomID: 0,
-        targetDate: '',
+        bookingDate: '', 
         timeDuration: ''
     });
 
@@ -104,9 +105,9 @@ function Menu(props) {
                         <div className="flex flex-col gap-0.5">
                             <div className="flex items-center gap-2">
                                 <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"></span>
-                                <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-[0.3em]">Live Dashboard</span>
+                                <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-[0.3em]">Live</span>
                             </div>
-                            <h1 className="text-xl font-light text-slate-800 tracking-tight">Main <span className="font-semibold text-blue-600">Menu</span></h1>
+                            <h1 className="text-xl font-light text-slate-800 tracking-tight">Booking <span className="font-semibold text-blue-600">Overview</span></h1>
                         </div>
                         <div className="hidden sm:flex flex-col items-end">
                             <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Today's Date:</span>
@@ -172,7 +173,6 @@ function Menu(props) {
 
             <div className="w-full flex-1 overflow-auto p-6 flex justify-center">
                 {isLoading ? (
-                    /* The Loading Animation */
                     <div className="flex flex-col items-center justify-center py-40">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
                         <p className="text-slate-500 font-medium animate-pulse">Fetching schedule...</p>
@@ -193,7 +193,9 @@ function Menu(props) {
                         {(props.viewType === 'day' ? filteredRooms : weekDays).map((item, colIdx) => {
                             const isDay = props.viewType === 'day';
                             const currentRoomID = isDay ? item.RoomID : selectedRoomForWeek;
-                            const currentDate = isDay ? props.viewDate : item;
+                            
+                            // FIX: Explicitly set the date for this exact column
+                            const exactColumnDate = isDay ? props.viewDate : item;
 
                             return (
                                 <div key={colIdx} className="w-64 border-r border-gray-200 last:border-r-0 flex-shrink-0">
@@ -206,7 +208,8 @@ function Menu(props) {
 
                                     {props.timePeriods.map((range, idx) => {
                                         const formattedRange = range.substring(0, 5);
-                                        const currentBooking = bookingMap[`${String(currentRoomID)}-${currentDate}-${String(formattedRange)}`];
+                                        // Look up map using the calculated exactColumnDate
+                                        const currentBooking = bookingMap[`${String(currentRoomID)}-${exactColumnDate}-${String(formattedRange)}`];
 
                                         return (
                                             <div key={idx} className="h-20 border-b border-gray-50 p-2 flex items-center justify-center">
@@ -226,9 +229,10 @@ function Menu(props) {
                                                             isOpen: true,
                                                             type: 'success',
                                                             title: 'Make a booking',
-                                                            message: `Booking for ${currentDate}`,
+                                                            message: `Booking for ${exactColumnDate}`,
                                                             roomID: currentRoomID,
-                                                            targetDate: currentDate,
+                                                            // FIX: Pass exactColumnDate to bookingDate state
+                                                            bookingDate: exactColumnDate, 
                                                             timeDuration: `${range}`
                                                         })}
                                                         className="text-[10px] font-bold text-emerald-500 tracking-tight hover:scale-105 transition-transform"
@@ -253,7 +257,8 @@ function Menu(props) {
                 message={popupConfig.message}
                 roomID={popupConfig.roomID}
                 timeDuration={popupConfig.timeDuration}
-                bookingDate={popupConfig.targetDate}
+                // FIX: Map the correctly named state to the PopUp prop
+                bookingDate={popupConfig.bookingDate} 
                 onClose={async () => {
                     setPopupConfig(prev => ({ ...prev, isOpen: false }));
                     setTimeout(async () => {

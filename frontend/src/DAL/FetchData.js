@@ -150,7 +150,13 @@ export default class FetchDAL {
         }
 
     }
-
+    static async checkWeekendDate(checkDate){
+        if (this.isWeekend(checkDate)) {
+            let jump = (checkDate.getDay() === 6) ? 2 : 1;
+            checkDate.setDate(checkDate.getDate() + jump);
+        }
+        return checkDate
+    }
     static async createDailyBooking(userID, description, roomID, startBookingDate, duration, title, recurrenceLength, dateBooked) {
         const timings = duration.split(" - ");
         let checkDate = new Date(startBookingDate);
@@ -203,12 +209,17 @@ export default class FetchDAL {
     }
     static formatDates(dateList){
         let formattedList = []
-        for(let i = 0; i <dateList.length; i++){
-            formattedList.push(dateList[i].toISOString().split('T')[0])
+        for (let i = 0; i < dateList.length; i++) {
+            const d = dateList[i];
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            
+            formattedList.push(`${year}-${month}-${day}`);
         }
         return formattedList
     }
-    static async createMonthlyRecurringBooking(description, roomID, bookingDate, duration, title, frequency, recurrenceLength, monthlyOrdinal, monthlyWeekday, monthlyType) {
+    static async createMonthlyRecurringBooking(description, roomID, bookingDate, duration, title, frequency, recurrenceLength, monthlyOrdinal, monthlyWeekday, monthlyType, skipweekend) {
         const timings = duration.split(" - ");
         let date = new Date(bookingDate);
         let user = await this.getUserData();
@@ -268,7 +279,7 @@ export default class FetchDAL {
             return true
         }
         else if (monthlyType.toLowerCase() === 'ordinal') {
-            let bookingDates = await this.createOrdinalDates(bookingDate, monthlyWeekday, monthlyOrdinal, recurrenceLength);
+            let bookingDates = await this.createOrdinalDates(bookingDate, monthlyWeekday, monthlyOrdinal, recurrenceLength, skipweekend);
             let dateStrings = this.formatDates(bookingDates); 
             
            const { data: conflicts, error: checkError } = await supabase
@@ -312,7 +323,7 @@ export default class FetchDAL {
         }
     }
 
-    static createOrdinalDates(bookingDate, targetDay, targetOrdinal, recurrenceLength) {
+    static createOrdinalDates(bookingDate, targetDay, targetOrdinal, recurrenceLength, skipweekend) {
         try{
             let results = [];
             let startDay = new Date(bookingDate);
@@ -327,13 +338,24 @@ export default class FetchDAL {
 
                 while (searchDate.getMonth() === currentMonth) {
                     if (searchDate.getDay() === parseInt(targetDay)) {
-                        occurrenceCounter++;
-
-                        if (occurrenceCounter === parseInt(targetOrdinal)) {
-                            results.push(new Date(searchDate));
-                            foundForThisMonth = true;
-                            break; 
+                        if(!skipweekend){
+                            occurrenceCounter++;
+                            if (occurrenceCounter === parseInt(targetOrdinal)) {
+                                results.push(new Date(searchDate));
+                                foundForThisMonth = true;
+                                break; 
+                            }
                         }
+                        else{
+                            updatedDate = this.checkWeekendDate(targetDay)
+                            occurrenceCounter++;
+                            if (occurrenceCounter === parseInt(targetOrdinal)) {
+                                results.push(new Date(updatedDate));
+                                foundForThisMonth = true;
+                                break; 
+                            }
+                        }
+                        
                     }
                     searchDate.setDate(searchDate.getDate() + 1);
                 }
@@ -415,7 +437,7 @@ export default class FetchDAL {
         }       
     }
 
-    static async createRecurringBooking(description, roomID, bookingDate, duration, title, frequency, recurrenceLength) {
+    static async createRecurringBooking(description, roomID, bookingDate, duration, title, frequency, recurrenceLength, skipweekend) {
         try {
             let bookingCreated = true
             let user = await this.getUserData();
@@ -427,11 +449,11 @@ export default class FetchDAL {
             if (freq === 'daily') {
                 spacing = 1;
                 console.log('Processing Daily');
-                bookingCreated = await this.createDailyBooking(userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked);
+                bookingCreated = await this.createDailyBooking(userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked, skipweekend);
                 return bookingCreated
             }
             else if (freq === 'weekly') {
-                bookingCreated = await this.createWeeklyBooking(userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked)
+                bookingCreated = await this.createWeeklyBooking(userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked, skipweekend)
                 return bookingCreated
             }
         }

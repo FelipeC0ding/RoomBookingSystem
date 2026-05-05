@@ -1,7 +1,8 @@
-import React,{ useState, useEffect } from 'react';
-import { ChevronDown ,Repeat,Minus, Plus,CheckCircle2, AlertCircle, X, BookOpen, AlignLeft } from 'lucide-react';
-import fetchData from '../DAL/FetchData'
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, Repeat, Minus, Plus, CheckCircle2, AlertCircle, X, BookOpen, AlignLeft } from 'lucide-react';
+import fetchData from '../DAL/FetchData';
 import ErrorPopup from './ErrorPopUp';
+
 const INPUT_STYLE = `
   w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200
   rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500
@@ -11,27 +12,34 @@ const INPUT_STYLE = `
 
 const LABEL_STYLE = "text-[13px] font-bold text-gray-500 ml-1 uppercase tracking-wider";
 
-function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , roomID, timeDuration, bookingDate}) {
+function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", roomID, timeDuration, bookingDate }) {
   if (!isOpen) return null;
 
   const isSuccess = type === 'success';
-  const [description, setDescription] = useState('')
-  const [bookingTitle, setTitle] = useState('')
-  const [isRecurring, setIsRecurring] = useState(false)
-  const [frequency, setFrequency] = useState('')
+  const [description, setDescription] = useState('');
+  const [bookingTitle, setTitle] = useState('');
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [frequency, setFrequency] = useState('');
   const [recurrenceLength, setRecurrenceLength] = useState(4); 
   const [monthlyType, setMonthlyType] = useState('date'); 
   const [monthlyOrdinal, setMonthlyOrdinal] = useState(1);
-  const [monthlyWeekday ,setMonthlyWeekday] = useState(1)
-  const [errorPopUp, setErrorPopup] = useState(false)
-  const[errorMessage, setErrorMessage] = useState('')
+  const [monthlyWeekday, setMonthlyWeekday] = useState(1);
+  
+  // NEW STATE: Skip weekends toggle
+  const [skipWeekends, setSkipWeekends] = useState(false);
+  
+  const [errorPopUp, setErrorPopup] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  
   const ordinals = [
-  { label: "1st", value: 1 },
-  { label: "2nd", value: 2 },
-  { label: "3rd", value: 3 },
-  { label: "4th", value: 4 }
-];
+    { label: "1st", value: 1 },
+    { label: "2nd", value: 2 },
+    { label: "3rd", value: 3 },
+    { label: "4th", value: 4 }
+  ];
+  
   const weekdays = {0:'Sunday', 1:'Monday', 2:'Tuesday', 3:'Wednesday', 4:'Thursday', 5:'Friday', 6:'Saturday'};
+  
   useEffect(() => {
     const dateObj = new Date(bookingDate);
     const dayIndex = dateObj.getDay(); 
@@ -40,7 +48,7 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
 
     setMonthlyWeekday(dayIndex);
     setMonthlyOrdinal(weekNum > 4 ? 4 : weekNum); 
-}, [bookingDate]);
+  }, [bookingDate]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
@@ -73,11 +81,9 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
                 required
                 className={INPUT_STYLE}
                 onChange={(e) => setTitle(e.target.value)}
-
               />
             </div>
           </div>
-
 
           <div className="space-y-2">
             <label className={LABEL_STYLE}>Description</label>
@@ -136,65 +142,97 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
                 </div>
 
                 {/* Monthly Selection */}
-          {frequency === 'Monthly' && (
-            <div className="space-y-2">
-              <button 
-                onClick={() => setMonthlyType('fixed')}
-                className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all
-                  ${monthlyType === 'fixed' ? 'border-blue-600 bg-blue-50/50' : 'border-slate-100 hover:bg-slate-50'}`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${monthlyType === 'fixed' ? 'border-blue-600' : 'border-slate-300'}`}>
-                    {monthlyType === 'fixed' && <div className="w-2 h-2 rounded-full bg-blue-600" />}
-                  </div>
-                  <span className="text-sm font-medium">Monthly Date: {new Date(bookingDate).getDate()}</span>
-                </div>
-              </button>
+                {frequency === 'Monthly' && (
+                  <div className="space-y-2">
+                    <button 
+                      onClick={() => setMonthlyType('fixed')}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all
+                        ${monthlyType === 'fixed' ? 'border-blue-600 bg-blue-50/50' : 'border-slate-100 hover:bg-slate-50'}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${monthlyType === 'fixed' ? 'border-blue-600' : 'border-slate-300'}`}>
+                          {monthlyType === 'fixed' && <div className="w-2 h-2 rounded-full bg-blue-600" />}
+                        </div>
+                        <span className="text-sm font-medium">Monthly Date: {new Date(bookingDate).getDate()}</span>
+                      </div>
+                    </button>
 
-              <div className={`rounded-xl border transition-all ${monthlyType === 'ordinal' ? 'border-blue-600 bg-blue-50/50' : 'border-slate-100'}`}>
-                <button 
-                  onClick={() => setMonthlyType('ordinal')}
-                  className="w-full flex items-center gap-3 p-3 text-left"
-                >
-                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${monthlyType === 'ordinal' ? 'border-blue-600' : 'border-slate-300'}`}>
-                    {monthlyType === 'ordinal' && <div className="w-2 h-2 rounded-full bg-blue-600" />}
-                  </div>
-                  <span className="text-sm font-medium">Every month on the:</span>
-                </button>
-                
-                {monthlyType === 'ordinal' && (
-                  <div className="px-3 pb-3 flex gap-2 animate-in fade-in duration-200">
-                    <div className="flex-1 relative">
-                      <select
-                        value={monthlyOrdinal}
-                        onChange={(e) => setMonthlyOrdinal(parseInt(e.target.value))}
-                        className="w-full appearance-none bg-white border border-blue-200 rounded-lg p-2 pr-8 text-xs font-bold text-blue-700 outline-none"
+                    <div className={`rounded-xl border transition-all ${monthlyType === 'ordinal' ? 'border-blue-600 bg-blue-50/50' : 'border-slate-100'}`}>
+                      <button 
+                        onClick={() => setMonthlyType('ordinal')}
+                        className="w-full flex items-center gap-3 p-3 text-left"
                       >
-                        {ordinals.map(o => (
-                          <option key={o.value} value={o.value}>
-                            {o.label.toUpperCase()}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-400 pointer-events-none" />
-                    </div>
-                    <div className="flex-[1.5] relative">
-                      <select
-                        value={monthlyWeekday}
-                        onChange={(e) => setMonthlyWeekday(parseInt(e.target.value))}
-                        className="w-full appearance-none bg-white border border-blue-200 rounded-lg p-2 pr-8 text-xs font-bold text-blue-700 outline-none"
-                      >
-                        {Object.entries(weekdays).map(([key, value]) => (
-                          <option key={key} value={key}>{value}</option>
-                        ))}
-                      </select>
-                      <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-400 pointer-events-none" />
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${monthlyType === 'ordinal' ? 'border-blue-600' : 'border-slate-300'}`}>
+                          {monthlyType === 'ordinal' && <div className="w-2 h-2 rounded-full bg-blue-600" />}
+                        </div>
+                        <span className="text-sm font-medium">Every month on the:</span>
+                      </button>
+                      
+                      {monthlyType === 'ordinal' && (
+                        <div className="px-3 pb-3 flex gap-2 animate-in fade-in duration-200">
+                          <div className="flex-1 relative">
+                            <select
+                              value={monthlyOrdinal}
+                              onChange={(e) => setMonthlyOrdinal(parseInt(e.target.value))}
+                              className="w-full appearance-none bg-white border border-blue-200 rounded-lg p-2 pr-8 text-xs font-bold text-blue-700 outline-none"
+                            >
+                              {ordinals.map(o => (
+                                <option key={o.value} value={o.value}>
+                                  {o.label.toUpperCase()}
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-400 pointer-events-none" />
+                          </div>
+                          <div className="flex-[1.5] relative">
+                            <select
+                              value={monthlyWeekday}
+                              onChange={(e) => setMonthlyWeekday(parseInt(e.target.value))}
+                              className="w-full appearance-none bg-white border border-blue-200 rounded-lg p-2 pr-8 text-xs font-bold text-blue-700 outline-none"
+                            >
+                              {Object.entries(weekdays).map(([key, value]) => (
+                                <option key={key} value={key}>{value}</option>
+                              ))}
+                            </select>
+                            <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-400 pointer-events-none" />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
-              </div>
-            </div>
-          )}
+
+                {/* NEW UI: Skip Weekends Toggle */}
+                {/* NEW UI: Skip Weekends Toggle */}
+                {frequency && (
+                  <div className="space-y-2 mt-4 pt-4 border-t border-slate-200">
+                    <label 
+                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200 ${
+                        skipWeekends 
+                          ? 'bg-blue-50 border-blue-600 shadow-sm' 
+                          : 'bg-white border-slate-100 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="relative flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={skipWeekends}
+                          onChange={(e) => setSkipWeekends(e.target.checked)}
+                          className="peer sr-only"
+                        />
+                        <div className={`w-10 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${skipWeekends ? 'bg-blue-600' : ''}`}></div>
+                      </div>
+                      <span className={`text-sm font-semibold transition-colors ${skipWeekends ? 'text-blue-700' : 'text-slate-700'}`}>
+                        Skip Weekends
+                      </span>
+                      <span className={`ml-auto text-[10px] font-medium px-2 py-1 rounded-md transition-colors ${
+                        skipWeekends ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'
+                      }`}>
+                        Mon-Fri only
+                      </span>
+                    </label>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Occurrences</label>
@@ -204,6 +242,7 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
                       value={recurrenceLength}
                       onChange={(e) => setRecurrenceLength(e.target.value)}
                       className="flex-1 text-center font-black text-base text-slate-800 focus:outline-none"
+                      min="1"
                     />
                   </div>
                 </div>
@@ -214,45 +253,39 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
 
         <div className="space-y-3">
           <button
-            onClick={async ()=> 
-              {
-                let booked = true
-                if(isRecurring)
-                {
-                  if(frequency === 'Monthly' && monthlyType === 'ordinal'){
-                    booked = await fetchData.createMonthlyRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength, monthlyOrdinal, monthlyWeekday,monthlyType);
-                    console.log(monthlyOrdinal, monthlyWeekday,monthlyType)
-                    console.log("Booking Result:", booked);
-                    if(!booked){
-                      setErrorPopup(true)
-                      setErrorMessage('Booking could not be created. Have any of these dates already been booked?')
-                      return booked;
-                    }
-                    onClose();
+            onClick={async () => {
+              let booked = true;
+              if (isRecurring) {
+                // Pass skipWeekends to the Monthly function
+                if (frequency === 'Monthly') {
+                  booked = await fetchData.createMonthlyRecurringBooking(
+                    description, roomID, bookingDate, timeDuration, bookingTitle, 
+                    frequency, recurrenceLength, monthlyOrdinal, monthlyWeekday, monthlyType, skipWeekends
+                  );
+                  console.log("Booking Result:", booked);
+                  if (!booked) {
+                    setErrorPopup(true);
+                    setErrorMessage('Booking could not be created. Have any of these dates already been booked?');
+                    return;
                   }
-                  else if(frequency === 'Monthly' && monthlyType === 'fixed'){
-                    booked = await fetchData.createMonthlyRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength, monthlyOrdinal, monthlyWeekday,monthlyType);
-                    if(!booked){
-                      setErrorPopup(true)
-                      setErrorMessage('Booking could not be created. Have any of these dates already been booked?')
-                      return booked;
-                    }
-                    onClose();
-                  }
-                  else{
-                    booked = await fetchData.createRecurringBooking(description, roomID, bookingDate, timeDuration, bookingTitle, frequency,recurrenceLength);
-                    console.log("Booking Result:", booked);
-                    if(!booked){
-                      setErrorPopup(true)
-                      setErrorMessage('Booking could not be created. Have any of these dates already been booked?')
-                      return booked;
-                    }
-                    onClose();
-                  }
-                }
-                else{
-                  await fetchData.createBooking(description, roomID, bookingDate, timeDuration, bookingTitle);
                   onClose();
+                } else {
+                  // Pass skipWeekends to the standard recurring function
+                  booked = await fetchData.createRecurringBooking(
+                    description, roomID, bookingDate, timeDuration, bookingTitle, 
+                    frequency, recurrenceLength, skipWeekends
+                  );
+                  console.log("Booking Result:", booked);
+                  if (!booked) {
+                    setErrorPopup(true);
+                    setErrorMessage('Booking could not be created. Have any of these dates already been booked?');
+                    return;
+                  }
+                  onClose();
+                }
+              } else {
+                await fetchData.createBooking(description, roomID, bookingDate, timeDuration, bookingTitle);
+                onClose();
               }
             }}
             className={`w-full py-4 px-6 font-bold rounded-2xl transition-all shadow-lg shadow-blue-200 active:scale-[0.98] ${
@@ -270,11 +303,11 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking" , r
           </button>
         </div>
       </div>
-        <ErrorPopup 
-          isOpen={errorPopUp} 
-          message={errorMessage} 
-          onClose={() => setErrorPopup(false)} 
-        />
+      <ErrorPopup 
+        isOpen={errorPopUp} 
+        message={errorMessage} 
+        onClose={() => setErrorPopup(false)} 
+      />
     </div>
   );
 }
