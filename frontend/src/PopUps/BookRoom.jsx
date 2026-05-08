@@ -263,9 +263,9 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", ro
                     frequency, recurrenceLength, monthlyOrdinal, monthlyWeekday, monthlyType, skipWeekends
                   );
                   console.log("Booking Result:", booked);
-                  if (!booked) {
+                  if (!booked.isValid) {
                     setErrorPopup(true);
-                    setErrorMessage('Booking could not be created. Have any of these dates already been booked?');
+                    setErrorMessage('Booking could not be created. ${booked.error}');
                     return;
                   }
                   onClose();

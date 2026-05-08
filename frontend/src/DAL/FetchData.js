@@ -181,7 +181,8 @@ export default class FetchDAL {
         if (checkError) return false;
         if (data && data.length > 0) {
             console.log("Conflicts found on:", data);
-            return false;
+            errorMessage = 'Conflicts found on: ${data}';
+            return { isValid: false, error: errorMessage };
         }
 
 
