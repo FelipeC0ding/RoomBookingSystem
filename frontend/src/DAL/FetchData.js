@@ -1,6 +1,27 @@
 import { data } from 'autoprefixer';
 import { supabase } from '../supabaseClient';
+import { cacheGet, cacheSet, cacheDelete } from '../lib/cache.js'; 
 export default class FetchDAL {
+
+
+
+    static async invalidateBookingCaches(userID, roomID = null) {
+        // Core keys that always need clearing
+        const keysToDelete = [
+            `bookings:user:${userID}`,
+            'bookings:all' 
+        ];
+        
+        // If a roomID is provided, clear room-specific caches too
+        if (roomID) {
+            keysToDelete.push(`bookings:room:${roomID}`);
+        }
+
+        console.log('Invalidating booking caches:', keysToDelete);
+        
+        // Execute deletions concurrently for better performance
+        await Promise.all(keysToDelete.map(key => cacheDelete(key)));
+    }
 
     static async AddUser(userID,email, firstname, surname, OrganisationID, departmentID) {
         try {
@@ -440,28 +461,30 @@ export default class FetchDAL {
 
     static async createRecurringBooking(description, roomID, bookingDate, duration, title, frequency, recurrenceLength, skipweekend) {
         try {
-            let bookingCreated = true
+            let bookingCreated = true;
             let user = await this.getUserData();
             let userID = user.id;
             const dateBooked = new Date().toISOString().split('T')[0];
             const freq = frequency.toLowerCase();
-            let spacing = 1;
 
             if (freq === 'daily') {
-                spacing = 1;
                 console.log('Processing Daily');
                 bookingCreated = await this.createDailyBooking(userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked, skipweekend);
-                return bookingCreated
             }
             else if (freq === 'weekly') {
-                bookingCreated = await this.createWeeklyBooking(userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked, skipweekend)
-                return bookingCreated
+                bookingCreated = await this.createWeeklyBooking(userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked, skipweekend);
             }
-        }
-        catch (error) {
+
+            // INVALIDATE CACHE if successful
+            if (bookingCreated) {
+                await this.invalidateBookingCaches(userID, roomID);
+            }
+
+            return bookingCreated;
+
+        } catch (error) {
             console.error("Recurrence Error:", error.message);
         }
-
     }
 
     static async createBooking(description, roomID, bookingDate, duration, title) {
@@ -470,9 +493,8 @@ export default class FetchDAL {
             let userID = user.id;
             const date = new Date();
             const dateBooked = date.toISOString().split('T')[0];
-            const timings = duration.split(" - ")
-            console.log(userID)
-            console.log(timings)
+            const timings = duration.split(" - ");
+            
             console.log("--- Executing booking Insert ---");
             const { error } = await supabase
                 .from('Booking')
@@ -485,38 +507,62 @@ export default class FetchDAL {
                     BookingEndTime: timings[1],
                     CreatedTimeStamp: dateBooked,
                     Title: title
-                })
-        }
-        catch (error) {
-            console.log(error.message)
+                });
+
+            if (error) {
+                console.log(error.message);
+                return;
+            }
+
+            // INVALIDATE CACHE
+            await this.invalidateBookingCaches(userID, roomID);
+
+        } catch (error) {
+            console.log(error.message);
         }
     }
     static async updateBooking(bookingID, title, description) {
-        console.log(bookingID, title, description)
+        console.log(bookingID, title, description);
         try {
+            let user = await this.getUserData();
+            
             const { error } = await supabase
                 .from('Booking')
                 .update({ 'Title': title, 'Description': description })
-                .eq('BookingID', bookingID)
+                .eq('BookingID', bookingID);
+            
+            if (error) {
+                console.log(error.message);
+                return;
+            }
+
+            // INVALIDATE CACHE
+            // We might not have the roomID immediately available in this context, 
+            // but we can at least clear the user's booking cache and the global cache.
+            if (user) {
+                await this.invalidateBookingCaches(user.id);
+            }
+
+        } catch (error) {
+            console.log(error.message);
         }
-        catch (error) {
-
-        }
-
-        console.log(this.fetchUserBookings())
-
     }
     static async fetchUserBookings(userId) {
+        const cacheKey = `bookings:user:${userId}`;
+        const cachedBookings = await cacheGet(cacheKey);
+        
+        if (cachedBookings) return cachedBookings;
+
         const { data, error } = await supabase
             .from('Booking')
-            .select(`
-                *,
-                Room ( RoomName, Capacity )
-            `)
+            .select(`*, Room ( RoomName, Capacity )`)
             .eq('UserID', userId)
             .order('BookingDate', { ascending: false });
 
         if (error) throw error;
+        
+        // Cache user bookings for 5 minutes (300 seconds)
+        await cacheSet(cacheKey, data, 300); 
         return data;
     }
 
@@ -585,73 +631,105 @@ export default class FetchDAL {
     }
 
     static async GetSchools() {
+        const cacheKey = 'orgs:schools:active';
+        
+        // 1. Check Cache
+        const cachedSchools = await cacheGet(cacheKey);
+        if (cachedSchools) {
+            console.log('SUCCESS (Cache): Schools');
+            return cachedSchools;
+        }
+
+        // 2. Fetch from Supabase on cache miss
         console.log("--- Executing Supabase fetch ---");
         const { data, error } = await supabase
             .from('Organisation')
             .select('OrganisationID,Name,StartTime,FinishTime,IntervalDuration,IntervalName,LunchStart, LunchEnd, BreakStart, BreakEnd')
             .eq('LisenceStatus', true)
 
-        if (error) {
-            throw error
-        } else {
-            console.log('SUCCESS:', data);
-        }
-        return data
+        if (error) throw error;
+        
+        // 3. Set Cache (e.g., cache for 1 hour / 3600 seconds)
+        await cacheSet(cacheKey, data, 3600);
+        console.log('SUCCESS (DB):', data);
+        
+        return data;
     }
 
-    static async getRooms(){
-        console.log('Getting Rooms')
-        let userConfirmed = await this.getCurrentUser()
-        console.log('User Object:', userConfirmed);
-        let orgID = userConfirmed.OrganisationID
-        userConfirmed = userConfirmed.Confirmed
+    static async getRooms() {
+        console.log('Getting Rooms');
+        let userConfirmed = await this.getCurrentUser();
+        let orgID = userConfirmed.OrganisationID;
+        
+        if (!userConfirmed.Confirmed) return null;
 
-        const{data, error} = await supabase
+        const cacheKey = `rooms:org:${orgID}`;
+        
+        // 1. Check Cache
+        const cachedRooms = await cacheGet(cacheKey);
+        if (cachedRooms) return cachedRooms;
+
+        // 2. Fetch from Supabase
+        const { data, error } = await supabase
             .from('Room')
             .select('*')
             .eq('IsAvailable', true)
-            .eq('OrganisationID', orgID)
+            .eq('OrganisationID', orgID);
 
         if (error) {
-            console.log(error.message, error.code)
-        } else {
-            console.log('SUCCESS:', data);
+            console.log(error.message, error.code);
+            return null;
         }
-        if(userConfirmed){
-           return data
-        }
-        else{
-            return null
-        }
+
+        // 3. Set Cache
+        await cacheSet(cacheKey, data, 3600);
+        return data;
     }
 
     static async AddNewRoom(title, location, capacity, features) {
         try {
             let capacityFormatted = parseInt(capacity);
             let orgID = await this.loggedInOrgID();
-            orgID = parseInt(orgID)
-            console.log('adding a new room', title, location, capacityFormatted, features, orgID)
+            orgID = parseInt(orgID);
+            
             const { error } = await supabase
                 .from('Room')
-                .insert({ RoomName: title, Capacity: capacityFormatted, IsAvailable: true, Location: location, Features: features, OrganisationID: orgID })
-        }
-        catch (error) {
-            console.log(error.message)
+                .insert({ 
+                    RoomName: title, 
+                    Capacity: capacityFormatted, 
+                    IsAvailable: true, 
+                    Location: location, 
+                    Features: features, 
+                    OrganisationID: orgID 
+                });
+                
+            if (error) throw error;
+
+            // INVALIDATE: The room list for this org has changed
+            await cacheDelete(`rooms:org:${orgID}`);
+            
+        } catch (error) {
+            console.log(error.message);
         }
     }
 
     static async deleteRoom(roomID) {
-        console.log('toomid for delte', roomID)
-        let id = parseInt(roomID)
+        let id = parseInt(roomID);
+        // We need the orgID to invalidate the cache. You might need to fetch the room first 
+        // to know which org it belongs to, or clear a global room cache if you change your key structure.
+        let orgID = await this.loggedInOrgID(); 
+
         const { error } = await supabase
             .from('Room')
             .delete()
-            .eq('RoomID', id)
+            .eq('RoomID', id);
+            
         if (error) {
-            console.log(error.message, error.code)
-
+            console.log(error.message, error.code);
+        } else {
+            // INVALIDATE
+            await cacheDelete(`rooms:org:${orgID}`);
         }
-
     }
 
     static async UpdateRooms(id, roomName, location, capacity, features) {
@@ -738,15 +816,36 @@ export default class FetchDAL {
 
     static async deleteBooking(bookingID) {
         try {
-            let id = parseInt(bookingID)
-            console.log(bookingID)
-            const response = await supabase
+            let id = parseInt(bookingID);
+            console.log(bookingID);
+            let user = await this.getUserData();
+            
+            // Optional: Fetch the booking first so we know which room cache to clear
+            const { data: bookingToDel } = await supabase
+                .from('Booking')
+                .select('RoomID')
+                .eq('BookingID', id)
+                .single();
+                
+            const roomID = bookingToDel ? bookingToDel.RoomID : null;
+
+            const { error } = await supabase
                 .from('Booking')
                 .delete()
-                .eq('BookingID', id)
-        }
-        catch (error) {
-            console.log('deleting user error-', error.message)
+                .eq('BookingID', id);
+            
+            if (error) {
+                console.log('deleting user error-', error.message);
+                return;
+            }
+
+            // INVALIDATE CACHE
+            if (user) {
+                await this.invalidateBookingCaches(user.id, roomID);
+            }
+
+        } catch (error) {
+            console.log('deleting booking error-', error.message);
         }
     }
 }
