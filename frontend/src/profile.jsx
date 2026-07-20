@@ -1,112 +1,250 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-    ChevronDown, ChevronUp, Settings, ArrowLeft, 
-    Calendar, Clock, BookOpen, User as UserIcon, Inbox, Repeat 
+import {
+    ChevronDown, ChevronLeft, ChevronRight, Settings, ArrowLeft,
+    Calendar, Clock, BookOpen, User as UserIcon, Inbox, Repeat, X
 } from 'lucide-react';
 import fetchData from './DAL/FetchData';
 import PopUp from './PopUps/editBooking';
 
-// --- Sub-component for rendering individual or grouped bookings ---
-// --- Sub-component for rendering individual or grouped bookings ---
-const BookingGroupCard = ({ group, isPast, onEdit }) => {
-    const [isExpanded, setIsExpanded] = useState(false);
-    const isRecurring = group.groupedBookings.length > 1;
+// --- Helpers ---
+const toKey = (dateLike) => {
+    const d = new Date(dateLike);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 
-    const handleMainClick = () => {
-        if (isRecurring) {
-            setIsExpanded(!isExpanded);
-        } else {
-            const b = group.groupedBookings[0];
-            onEdit(b.BookingID, b.Title, b.Description, b.BookingStartTime, b.BookingEndTime, b.BookingDate);
-        }
-    };
+const isSameDay = (a, b) => toKey(a) === toKey(b);
+
+const MONTH_LABEL = (d) => d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+// --- Sub-component: a single booking chip inside a day cell ---
+const BookingChip = ({ booking, isPast, onClick }) => (
+    <button
+        onClick={(e) => { e.stopPropagation(); onClick(booking); }}
+        className={`w-full text-left px-2 py-1 rounded-md text-[11px] font-semibold truncate transition-colors ${
+            isPast
+                ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+        }`}
+        title={`${booking.Title} · ${booking.RoomName} · ${booking.BookingStartTime}-${booking.BookingEndTime}`}
+    >
+        {booking.BookingStartTime} {booking.Title}
+    </button>
+);
+
+// --- Sub-component: the day-detail panel below the grid ---
+const DayDetailPanel = ({ date, bookings, todayKey, onEdit, onClose }) => {
+    if (!date) return null;
+    const isPast = toKey(date) < todayKey;
 
     return (
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-md transition-all group overflow-hidden">
-            {/* Main Header Area */}
-            <div 
-                className={`flex items-center justify-between ${isRecurring ? 'cursor-pointer' : 'cursor-pointer'}`}
-                onClick={handleMainClick}
-            >
-                <div className="flex items-start sm:items-center gap-5 w-full">
-                    <div className="hidden sm:flex w-12 h-12 bg-slate-50 rounded-xl items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors shrink-0">
-                        {isRecurring ? <Repeat size={20} /> : <Calendar size={20} />}
-                    </div>
-                    
-                    <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                            <h3 className="font-bold text-slate-800 text-lg">{group.RoomName}</h3>
-                            {isRecurring && (
-                                // CHANGED HERE: bg-blue-50 and text-blue-600
-                                <span className="px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
-                                    <Repeat size={10} /> Series ({group.groupedBookings.length})
-                                </span>
-                            )}
-                        </div>
-                        
-                        <div className="mt-2 space-y-2">
-                            <h4 className="text-base font-semibold text-slate-800 leading-tight">
-                                {group.Title}
-                            </h4>
-                            <p className="text-sm text-slate-500 line-clamp-2 italic">
-                                "{group.Description}"
-                            </p>
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 mt-6 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center justify-between mb-4">
+                <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-blue-600">
+                        {isPast ? 'Past booking' : 'Upcoming'}
+                    </p>
+                    <h3 className="text-xl font-black text-slate-800">
+                        {date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+                    </h3>
+                </div>
+                <button
+                    onClick={onClose}
+                    className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full p-2 transition-colors"
+                >
+                    <X size={18} />
+                </button>
+            </div>
 
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-2 border-t border-slate-100">
-                                <span className="flex items-center gap-1.5 text-xs font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-md">
-                                    <Clock size={13} className="text-blue-500" />
-                                    {group.BookingStartTime} – {group.BookingEndTime}
+            {bookings.length === 0 ? (
+                <p className="text-slate-400 italic text-sm py-6 text-center">No bookings on this day.</p>
+            ) : (
+                <div className="space-y-3">
+                    {bookings
+                        .slice()
+                        .sort((a, b) => a.BookingStartTime.localeCompare(b.BookingStartTime))
+                        .map((b) => (
+                            <div
+                                key={b.BookingID}
+                                onClick={() => onEdit(b)}
+                                className="flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-colors group"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-lg bg-slate-50 group-hover:bg-blue-100 flex items-center justify-center text-slate-400 group-hover:text-blue-600 transition-colors shrink-0">
+                                        <Calendar size={16} />
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-slate-800 text-sm">{b.Title}</p>
+                                        <p className="text-xs text-slate-500">{b.RoomName}</p>
+                                    </div>
+                                </div>
+                                <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md shrink-0">
+                                    <Clock size={12} className="text-blue-500" />
+                                    {b.BookingStartTime} – {b.BookingEndTime}
                                 </span>
-                                
-                                {!isRecurring && (
-                                    <span className="flex items-center gap-1.5 text-xs font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-md">
-                                        <Calendar size={13} className="text-blue-500" />
-                                        {new Date(group.BookingDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                                    </span>
-                                )}
                             </div>
-                        </div>
-                    </div>
+                        ))}
+                </div>
+            )}
+        </div>
+    );
+};
 
-                    {/* Status Badge & Chevron */}
-                    <div className="flex flex-col items-end gap-3 shrink-0">
-                        <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                            isPast ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
-                        }`}>
-                            {isPast ? 'Confirmed' : 'Upcoming'}
-                        </span>
-                        {isRecurring && (
-                            <div className="text-slate-400 p-1 bg-slate-50 rounded-full hover:bg-slate-100 hover:text-blue-600 transition-colors">
-                                {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                            </div>
-                        )}
-                    </div>
+// --- Sub-component: month calendar grid ---
+const CalendarView = ({ bookings, onEdit }) => {
+    const [monthCursor, setMonthCursor] = useState(() => {
+        const d = new Date();
+        d.setDate(1);
+        return d;
+    });
+    const [selectedDate, setSelectedDate] = useState(null);
+
+    const todayKey = toKey(new Date());
+
+    const bookingsByDay = useMemo(() => {
+        const map = new Map();
+        bookings.forEach((b) => {
+            const key = toKey(b.BookingDate);
+            if (!map.has(key)) map.set(key, []);
+            map.get(key).push(b);
+        });
+        return map;
+    }, [bookings]);
+
+    // Build a 6-week grid starting on Sunday
+    const gridDays = useMemo(() => {
+        const firstOfMonth = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
+        const startOffset = firstOfMonth.getDay(); // 0 = Sunday
+        const gridStart = new Date(firstOfMonth);
+        gridStart.setDate(firstOfMonth.getDate() - startOffset);
+
+        return Array.from({ length: 42 }, (_, i) => {
+            const d = new Date(gridStart);
+            d.setDate(gridStart.getDate() + i);
+            return d;
+        });
+    }, [monthCursor]);
+
+    const goToMonth = (delta) => {
+        setMonthCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
+        setSelectedDate(null);
+    };
+
+    const selectedBookings = selectedDate ? (bookingsByDay.get(toKey(selectedDate)) || []) : [];
+
+    return (
+        <div>
+            {/* Month navigation */}
+            <div className="flex items-center justify-between mb-5">
+                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <BookOpen size={22} className="text-blue-600" />
+                    {MONTH_LABEL(monthCursor)}
+                </h2>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => goToMonth(-1)}
+                        className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-300 transition-colors"
+                        aria-label="Previous month"
+                    >
+                        <ChevronLeft size={18} />
+                    </button>
+                    <button
+                        onClick={() => {
+                            const d = new Date();
+                            d.setDate(1);
+                            setMonthCursor(d);
+                            setSelectedDate(null);
+                        }}
+                        className="px-3 py-2 rounded-lg border border-slate-200 text-slate-600 text-xs font-bold uppercase tracking-wider hover:text-blue-600 hover:border-blue-300 transition-colors"
+                    >
+                        Today
+                    </button>
+                    <button
+                        onClick={() => goToMonth(1)}
+                        className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-300 transition-colors"
+                        aria-label="Next month"
+                    >
+                        <ChevronRight size={18} />
+                    </button>
                 </div>
             </div>
 
-            {/* Expanded Recurring Dates Area */}
-            {isRecurring && isExpanded && (
-                <div className="mt-5 pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                    {group.groupedBookings.map((b) => (
-                        <div 
-                            key={b.BookingID}
-                            onClick={(e) => {
-                                e.stopPropagation(); 
-                                onEdit(b.BookingID, b.Title, b.Description, b.BookingStartTime, b.BookingEndTime, b.BookingDate);
-                            }}
-                            className="flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-slate-50 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-colors group/item"
-                        >
-                            <span className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                                <Calendar size={14} className="text-slate-400 group-hover/item:text-blue-600" />
-                                {new Date(b.BookingDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                            </span>
-                            {!isPast && (
-                                <Settings size={14} className="text-slate-400 group-hover/item:text-blue-600 opacity-0 group-hover/item:opacity-100 transition-opacity" />
-                            )}
+            {/* Legend */}
+            <div className="flex items-center gap-4 mb-4 text-xs font-medium text-slate-500">
+                <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Upcoming
+                </span>
+                <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" /> Past
+                </span>
+            </div>
+
+            {/* Grid */}
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                <div className="grid grid-cols-7 border-b border-slate-100">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+                        <div key={d} className="py-3 text-center text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                            {d}
                         </div>
                     ))}
                 </div>
-            )}
+
+                <div className="grid grid-cols-7">
+                    {gridDays.map((day, idx) => {
+                        const key = toKey(day);
+                        const inMonth = day.getMonth() === monthCursor.getMonth();
+                        const isToday = key === todayKey;
+                        const isPast = key < todayKey;
+                        const dayBookings = bookingsByDay.get(key) || [];
+                        const isSelected = selectedDate && isSameDay(day, selectedDate);
+
+                        return (
+                            <div
+                                key={idx}
+                                onClick={() => setSelectedDate(day)}
+                                className={`min-h-[6.5rem] p-2 border-b border-r border-slate-100 last:border-r-0 cursor-pointer transition-colors ${
+                                    inMonth ? 'bg-white hover:bg-slate-50' : 'bg-slate-50/60'
+                                } ${isSelected ? 'ring-2 ring-inset ring-blue-500' : ''}`}
+                            >
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <span
+                                        className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${
+                                            isToday
+                                                ? 'bg-blue-600 text-white'
+                                                : inMonth
+                                                ? 'text-slate-700'
+                                                : 'text-slate-300'
+                                        }`}
+                                    >
+                                        {day.getDate()}
+                                    </span>
+                                    {dayBookings.length > 3 && (
+                                        <span className="text-[10px] font-bold text-slate-400">+{dayBookings.length - 3}</span>
+                                    )}
+                                </div>
+
+                                <div className="space-y-1">
+                                    {dayBookings.slice(0, 3).map((b) => (
+                                        <BookingChip
+                                            key={b.BookingID}
+                                            booking={b}
+                                            isPast={isPast}
+                                            onClick={() => setSelectedDate(day)}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            <DayDetailPanel
+                date={selectedDate}
+                bookings={selectedBookings}
+                todayKey={todayKey}
+                onEdit={(b) => onEdit(b.BookingID, b.Title, b.Description, b.BookingStartTime, b.BookingEndTime, b.BookingDate)}
+                onClose={() => setSelectedDate(null)}
+            />
         </div>
     );
 };
@@ -173,46 +311,9 @@ function ProfilePage({ onGoBack }) {
         });
     }
 
-    // --- Grouping Logic ---
-    // We use useMemo so this only recalculates when 'bookings' state changes
-    const { upcomingGroups, pastGroups, pendingCount } = useMemo(() => {
+    const pendingCount = useMemo(() => {
         const today = new Date().setHours(0, 0, 0, 0);
-        const upcoming = [];
-        const past = [];
-        let count = 0;
-
-        // 1. Separate into past and future
-        bookings.forEach(b => {
-            if (new Date(b.BookingDate).setHours(0, 0, 0, 0) >= today) {
-                upcoming.push(b);
-                count++;
-            } else {
-                past.push(b);
-            }
-        });
-
-        // 2. Helper function to group bookings
-        const groupBookings = (bookingList) => {
-            const map = new Map();
-            bookingList.forEach(b => {
-                // Group by Title, Room, and Time to identify a "series"
-                const key = `${b.Title}_${b.RoomName}_${b.BookingStartTime}_${b.BookingEndTime}`;
-                if (!map.has(key)) {
-                    map.set(key, { ...b, groupedBookings: [b] });
-                } else {
-                    map.get(key).groupedBookings.push(b);
-                    // Sort dates chronologically within the group
-                    map.get(key).groupedBookings.sort((x, y) => new Date(x.BookingDate) - new Date(y.BookingDate));
-                }
-            });
-            return Array.from(map.values());
-        };
-
-        return {
-            upcomingGroups: groupBookings(upcoming),
-            pastGroups: groupBookings(past),
-            pendingCount: count
-        };
+        return bookings.filter((b) => new Date(b.BookingDate).setHours(0, 0, 0, 0) >= today).length;
     }, [bookings]);
 
     return (
@@ -257,14 +358,14 @@ function ProfilePage({ onGoBack }) {
                                         <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-2">
                                             {user?.user_metadata?.Firstname || 'User'}
                                         </h1>
-                                        
+
                                         <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
                                             <span className="px-3 py-1 bg-slate-100 rounded-full text-slate-600 text-sm font-semibold border border-slate-200">
                                                 Department: {department || 'General Staff'}
                                             </span>
                                             <span className="flex items-center gap-1.5 text-slate-400 text-sm font-medium">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                                                Click a booking to make an edit
+                                                Click a day to see and edit its bookings
                                             </span>
                                         </div>
                                     </div>
@@ -283,61 +384,19 @@ function ProfilePage({ onGoBack }) {
                     </div>
                 </div>
 
-                <div className="space-y-4">
-                    {/* UPCOMING BOOKINGS */}
-                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-6">
-                        <BookOpen size={22} className="text-blue-600" />
-                        My Current Bookings
-                    </h2>
-
-                    {loading ? (
-                        <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-                            <p>Fetching your bookings...</p>
-                        </div>
-                    ) : upcomingGroups.length > 0 ? (
-                        upcomingGroups.map((group, index) => (
-                            <BookingGroupCard 
-                                key={index} 
-                                group={group} 
-                                isPast={false} 
-                                onEdit={handleBookingClick} 
-                            />
-                        ))
-                    ) : (
-                        <div className="bg-slate-100 border-2 border-dashed border-slate-200 rounded-3xl py-20 flex flex-col items-center justify-center text-slate-400">
-                            <Inbox size={48} className="mb-4 opacity-20" />
-                            <p className="font-medium italic">No upcoming bookings scheduled.</p>
-                        </div>
-                    )}
-
-                    {/* PAST BOOKINGS */}
-                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2 mt-12 mb-6">
-                        <BookOpen size={22} className="text-blue-600" />
-                        My Booking History
-                    </h2>
-
-                    {loading ? (
-                        <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-                            <p>Loading your history...</p>
-                        </div>
-                    ) : pastGroups.length > 0 ? (
-                        pastGroups.map((group, index) => (
-                            <BookingGroupCard 
-                                key={index} 
-                                group={group} 
-                                isPast={true} 
-                                onEdit={handleBookingClick} 
-                            />
-                        ))
-                    ) : (
-                        <div className="bg-slate-100 border-2 border-dashed border-slate-200 rounded-3xl py-20 flex flex-col items-center justify-center text-slate-400">
-                            <Inbox size={48} className="mb-4 opacity-20" />
-                            <p className="font-medium italic">No bookings found in your history.</p>
-                        </div>
-                    )}
-                </div>
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+                        <p>Fetching your bookings...</p>
+                    </div>
+                ) : bookings.length > 0 ? (
+                    <CalendarView bookings={bookings} onEdit={handleBookingClick} />
+                ) : (
+                    <div className="bg-slate-100 border-2 border-dashed border-slate-200 rounded-3xl py-20 flex flex-col items-center justify-center text-slate-400">
+                        <Inbox size={48} className="mb-4 opacity-20" />
+                        <p className="font-medium italic">No bookings found.</p>
+                    </div>
+                )}
             </div>
 
             <PopUp

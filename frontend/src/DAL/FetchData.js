@@ -1,9 +1,8 @@
 import { data } from 'autoprefixer';
 import { supabase } from '../supabaseClient';
 import { cacheGet, cacheSet, cacheDelete } from '../lib/cache.js'; 
+
 export default class FetchDAL {
-
-
 
     static async invalidateBookingCaches(userID, roomID = null) {
         // Core keys that always need clearing
