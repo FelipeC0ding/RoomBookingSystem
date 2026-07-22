@@ -4,7 +4,7 @@ import FetchData from './DAL/FetchData';
 import PopUp from './PopUps/popUpSignUp';
 import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
-import {Link} from 'react-router-dom'
+
 const INPUT_CONTAINER = "relative mb-1 w-full";
 const ICON_STYLE = "absolute left-3 top-1/2 -translate-y-1/2 text-gray-400";
 const INPUT_STYLE = `
@@ -15,10 +15,7 @@ const INPUT_STYLE = `
 `;
 
 function SignUp() {
-    const [schools, setSchools] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [selectedSchool, setSelectedSchool] = useState('');
-
     const [Departments, setDepartments] = useState([]);
     const [Deptloading, setDeptLoading] = useState(false);
     const [selectedDepartment, setSelectedDepartment] = useState('');
@@ -29,27 +26,26 @@ function SignUp() {
     const [password, setPassword] = useState('');
     const [passwordConfirm, setPasswordConfirm] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    
     const [popupConfig, setPopupConfig] = useState({
         isOpen: false,
         type: 'success',
         title: '',
         message: ''
     });
-    const navigate = useNavigate()
+    
+    const navigate = useNavigate();
     const isStrong = password.length >= 6 && /[A-Z]/.test(password) && /[^A-Za-z0-9]/.test(password);
 
     useEffect(() => {
         const initPage = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             
-            // If they already have a session, they are returning users
             if (session) {
                 setEmail(session.user.email);
                 return;
             }
 
-            // NEW: Check if there is a token in the URL. 
-            // If there is, DO NOT navigate to LoginPage. Let them stay and sign up.
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('token_hash')) {
                 return; 
@@ -57,20 +53,19 @@ function SignUp() {
 
             navigate('/LoginPage');
         };
+
         const setupUser = async (session) => {
-            
             setEmail(session.user.email);
-            try {
-                const schoolData = await FetchData.GetSchools();
-                setSchools(schoolData);
-            } catch (error) {
-                console.error(error);
-            } finally {
-                setLoading(false);
-                // Don't navigate away! You want them to fill out the form here.
+            
+            // Extract the secure org ID set during the invite to load departments
+            const orgId = session.user.app_metadata?.organisation_id;
+            if (orgId) {
+                await getALlDepartments(orgId);
             }
-        
+            
+            setLoading(false);
         };
+
         initPage();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -83,21 +78,6 @@ function SignUp() {
 
         return () => subscription.unsubscribe();
     }, [navigate]);
-
-    useEffect(() => {
-        async function getALlSchools() {
-            try {
-                setLoading(true);
-                const data = await FetchData.GetSchools();
-                console.log(data)
-                setSchools(data);
-                setLoading(false);
-            } catch (error) {
-                console.log(error);
-            }
-        }
-        getALlSchools();
-    }, []);
 
     const getALlDepartments = async (organisationID) => {
         try {
@@ -115,7 +95,6 @@ function SignUp() {
         if (e) e.preventDefault();
         setIsSubmitting(true);
 
-        // 1. Validations (Keep these as they are)
         if (password !== passwordConfirm) {
             setPopupConfig({ isOpen: true, type: 'error', title: 'Mismatch', message: 'Passwords must match.' });
             setIsSubmitting(false);
@@ -130,35 +109,37 @@ function SignUp() {
         try {
             const urlParams = new URLSearchParams(window.location.search);
             const tokenHash = urlParams.get('token_hash') || urlParams.get('token');
-            const emailFromUrl = urlParams.get('email');
 
-            const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
-                token_hash: tokenHash,
-                type: 'invite',
-            });
-            if (verifyError) throw new Error("Invite link invalid. Contact admin.");
+            // 1. Verify OTP
+            if (tokenHash) {
+                const { error: verifyError } = await supabase.auth.verifyOtp({
+                    token_hash: tokenHash,
+                    type: 'invite',
+                });
+                if (verifyError) throw new Error("Invite link invalid. Contact admin.");
+            }
 
-            const orgID = await FetchData.GetOrganisationID(selectedSchool);
-            const deptID = await FetchData.GetDepartmentID(selectedDepartment);
-
-            const { data: authData, error: authError } = await supabase.auth.updateUser({
+            // 2. Safely update password and cosmetic names
+            const { error: authError } = await supabase.auth.updateUser({
                 password: password,
                 data: {
-                    organisation_id: orgID,
                     Firstname: firstname,
                     Surname: surname,
                 }
             });
             if (authError) throw authError;
 
-            await FetchData.AddUser(
-                verifyData.user.id, 
-                emailFromUrl, 
-                firstname, 
-                surname, 
-                orgID, 
-                deptID
-            );
+            // 3. Resolve the Department ID
+            const deptID = await FetchData.GetDepartmentID(selectedDepartment);
+
+            // 4. Securely create the user profile via our Postgres RPC
+            const { error: rpcError } = await supabase.rpc('complete_signup', {
+                p_firstname: firstname,
+                p_surname: surname,
+                p_department_id: deptID
+            });
+            
+            if (rpcError) throw rpcError;
 
             setPopupConfig({
                 isOpen: true,
@@ -214,25 +195,7 @@ function SignUp() {
 
                         <div className="space-y-4">
                             <h3 className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-2">Work</h3>
-                            <div className="space-y-1">
-                                <label className="text-sm font-semibold text-gray-700 ml-1">School</label>
-                                <div className={INPUT_CONTAINER}>
-                                    <School size={18} className={ICON_STYLE} />
-                                    <select
-                                        value={selectedSchool}
-                                        onChange={(e) => { getALlDepartments(e.target.value); setSelectedSchool(e.target.value) }}
-                                        className={INPUT_STYLE}
-                                        disabled={loading}
-                                        required
-                                    >
-                                        <option value="" disabled>{loading ? "Loading schools..." : "Select school"}</option>
-                                        {schools.map((school) => (
-                                            <option key={school.id} value={school.id}>{school.Name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
+                            
                             <div className="space-y-1">
                                 <label className="text-sm font-semibold text-gray-700 ml-1">Department</label>
                                 <div className={INPUT_CONTAINER}>
@@ -241,7 +204,7 @@ function SignUp() {
                                         value={selectedDepartment}
                                         onChange={(e) => setSelectedDepartment(e.target.value)}
                                         className={INPUT_STYLE}
-                                        disabled={!selectedSchool || Deptloading}
+                                        disabled={Deptloading}
                                         required
                                     >
                                         <option value="" disabled>{Deptloading ? "Loading..." : "Select department"}</option>
