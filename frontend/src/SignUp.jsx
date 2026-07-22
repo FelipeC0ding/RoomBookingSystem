@@ -38,32 +38,51 @@ function SignUp() {
     const isStrong = password.length >= 6 && /[A-Z]/.test(password) && /[^A-Za-z0-9]/.test(password);
 
     useEffect(() => {
-        const initPage = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            if (session) {
-                setEmail(session.user.email);
-                return;
-            }
-
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('token_hash')) {
-                return; 
-            }
-
-            navigate('/LoginPage');
-        };
-
         const setupUser = async (session) => {
-            setEmail(session.user.email);
+            setEmail(session?.user?.email);
             
             // Extract the secure org ID set during the invite to load departments
-            const orgId = session.user.app_metadata?.organisation_id;
+            const orgId = session?.user?.app_metadata?.organisation_id;
+            console.log("Extracted Org ID from Token:", orgId); // Check your console to verify this!
+            
             if (orgId) {
                 await getALlDepartments(orgId);
             }
             
             setLoading(false);
+        };
+
+        const initPage = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (session) {
+                await setupUser(session);
+                return;
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const tokenHash = urlParams.get('token_hash') || urlParams.get('token');
+            
+            if (tokenHash) {
+                // VERIFY OTP IMMEDIATELY ON PAGE LOAD
+                const { data: verifyData, error } = await supabase.auth.verifyOtp({
+                    token_hash: tokenHash,
+                    type: 'invite',
+                });
+                
+                if (error) {
+                    console.error("Invite token error:", error);
+                    setPopupConfig({ isOpen: true, type: 'error', title: 'Invalid Link', message: 'This invite link has expired or is invalid.' });
+                    return;
+                }
+                
+                if (verifyData?.session) {
+                    await setupUser(verifyData.session);
+                }
+                return; 
+            }
+
+            navigate('/LoginPage');
         };
 
         initPage();
@@ -86,7 +105,7 @@ function SignUp() {
             setDepartments(data);
             setDeptLoading(false);
         } catch (error) {
-            console.log('SignUp: ID = ', organisationID);
+            console.error('Failed to load departments for Org ID:', organisationID, error);
             setDeptLoading(false);
         }
     }
@@ -107,19 +126,7 @@ function SignUp() {
         }
 
         try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const tokenHash = urlParams.get('token_hash') || urlParams.get('token');
-
-            // 1. Verify OTP
-            if (tokenHash) {
-                const { error: verifyError } = await supabase.auth.verifyOtp({
-                    token_hash: tokenHash,
-                    type: 'invite',
-                });
-                if (verifyError) throw new Error("Invite link invalid. Contact admin.");
-            }
-
-            // 2. Safely update password and cosmetic names
+            // Token is already verified on page load, so we just set the password!
             const { error: authError } = await supabase.auth.updateUser({
                 password: password,
                 data: {
@@ -129,10 +136,10 @@ function SignUp() {
             });
             if (authError) throw authError;
 
-            // 3. Resolve the Department ID
+            // Resolve the Department ID
             const deptID = await FetchData.GetDepartmentID(selectedDepartment);
 
-            // 4. Securely create the user profile via our Postgres RPC
+            // Securely create the user profile via our Postgres RPC
             const { error: rpcError } = await supabase.rpc('complete_signup', {
                 p_firstname: firstname,
                 p_surname: surname,
@@ -204,7 +211,7 @@ function SignUp() {
                                         value={selectedDepartment}
                                         onChange={(e) => setSelectedDepartment(e.target.value)}
                                         className={INPUT_STYLE}
-                                        disabled={Deptloading}
+                                        disabled={Deptloading || loading}
                                         required
                                     >
                                         <option value="" disabled>{Deptloading ? "Loading..." : "Select department"}</option>
