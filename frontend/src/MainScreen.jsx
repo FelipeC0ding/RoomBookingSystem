@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User, ShieldAlert, Settings, LogOut, Filter, Calendar } from 'lucide-react';
 import AdminPage from './Admin.jsx';
 import fetchData from './DAL/FetchData.js'
@@ -39,7 +40,6 @@ function Menu(props) {
         getRoomsToDisplay();
     }, []);
 
-    // FIX: Changed 'targetDate' to 'bookingDate' to match the PopUp props exactly
     const [popupConfig, setPopupConfig] = useState({
         isOpen: false,
         type: 'success',
@@ -194,7 +194,6 @@ function Menu(props) {
                             const isDay = props.viewType === 'day';
                             const currentRoomID = isDay ? item.RoomID : selectedRoomForWeek;
                             
-                            // FIX: Explicitly set the date for this exact column
                             const exactColumnDate = isDay ? props.viewDate : item;
 
                             return (
@@ -208,7 +207,6 @@ function Menu(props) {
 
                                     {props.timePeriods.map((range, idx) => {
                                         const formattedRange = range.substring(0, 5);
-                                        // Look up map using the calculated exactColumnDate
                                         const currentBooking = bookingMap[`${String(currentRoomID)}-${exactColumnDate}-${String(formattedRange)}`];
 
                                         return (
@@ -231,7 +229,6 @@ function Menu(props) {
                                                             title: 'Make a booking',
                                                             message: `Booking for ${exactColumnDate}`,
                                                             roomID: currentRoomID,
-                                                            // FIX: Pass exactColumnDate to bookingDate state
                                                             bookingDate: exactColumnDate, 
                                                             timeDuration: `${range}`
                                                         })}
@@ -257,7 +254,6 @@ function Menu(props) {
                 message={popupConfig.message}
                 roomID={popupConfig.roomID}
                 timeDuration={popupConfig.timeDuration}
-                // FIX: Map the correctly named state to the PopUp prop
                 bookingDate={popupConfig.bookingDate} 
                 onClose={async () => {
                     setPopupConfig(prev => ({ ...prev, isOpen: false }));
@@ -286,23 +282,41 @@ function MainScreen() {
     const [userConfirmed, setUserConfirmed] = useState(false);
     const [showError, setShowError] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    
+    const navigate = useNavigate(); // Initialize navigation
 
     useEffect(() => {
         async function loadInitialData() {
+            // 1. Check for a base auth session first
+            const { data: userSession } = await supabase.auth.getSession();
+            if (!userSession?.session) {
+                navigate('/login');
+                return;
+            }
+
+            // 2. Fetch the database profile
+            const user = await fetchData.getCurrentUser();
+
+            // 3. THE ROUTE GUARD: Intercept incomplete profiles
+            if (!user || !user.Firstname || !user.DepartmentID) {
+                navigate('/complete-signup');
+                return; // Stop execution here
+            }
+
+            // 4. If they pass the guard, load the rest of the app
+            setUserRole(user.Role.toUpperCase());
+            setUserConfirmed(user.Confirmed);
+
             const times = await timeCalcs.getTimeHeaders();
             setTimePeriods(times);
-
-            const user = await fetchData.getCurrentUser();
-            if (user) {
-                setUserRole(user.Role.toUpperCase());
-                setUserConfirmed(user.Confirmed);
-            }
         }
+        
         loadInitialData();
-    }, []);
+    }, [navigate]);
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
+        navigate('/login'); // Ensure logout kicks them out visually
     };
 
     // Centralized Navigation Handler
@@ -314,7 +328,8 @@ function MainScreen() {
         }
 
         if (target === 'admin' && userRole !== 'ADMIN') {
-            alert("Security: You do not have permission to access admin page.");
+            setErrorMessage("Security: You do not have permission to access the admin page.");
+            setShowError(true);
             return;
         }
 
