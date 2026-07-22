@@ -764,22 +764,19 @@ export default class FetchDAL {
     }
 
     static async GetDepartments(organisationID) {
-        organisationID = await this.GetOrganisationID(organisationID)
-        console.log("--- Executing Dept fetch ---");
         const { data, error } = await supabase
             .from('Department')
             .select('DepartmentID,Name')
-            .eq('OrganisationID', organisationID)
+            .eq('OrganisationID', organisationID); 
 
         if (error) {
-            console.log(error)
-            throw error
+            console.log(error);
+            throw error;
         } else {
-            console.log(organisationID);
+            console.log("Fetched Departments for Org ID:", organisationID);
         }
 
-        return data
-
+        return data;
     }
 
     static async GetDepartmentID(Name) {
