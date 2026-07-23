@@ -104,33 +104,41 @@ export default class FetchDAL {
     }
 
     static async makeAdmin(userID) {
-        console.log('UserID to be admin', userID)
+        console.log('1. UserID to be admin', userID);
         try {
-            const { error } = await supabase.rpc('update_user_role', {
-                target_user_id: userID,
-                new_role: 'admin'
-            })
-            if (error) throw error;
+            console.log('2. Firing Edge Function...');
+            const response = await supabase.functions.invoke('update-user-role', {
+                body: { target_user_id: userID, new_role: 'admin' }
+            });
+            
+            console.log('3. Edge Function Raw Response:', response);
+            
+            if (response.error) throw response.error;
+            
         }
         catch (error) {
-            console.log(error.message)
+            console.error('4. Error making admin:', error);
         }
-
     }
+
     static async removeAdmin(userID) {
-        console.log('UserID to have admin revoked', userID)
+        console.log('1. UserID to have admin revoked', userID);
         try {
-            const { error } = await supabase.rpc('update_user_role', {
-                target_user_id: userID,
-                new_role: 'standard'
-            })
-            if (error) throw error;
+            console.log('2. Firing Edge Function...');
+            const response = await supabase.functions.invoke('update-user-role', {
+                body: { target_user_id: userID, new_role: 'standard' }
+            });
+            
+            console.log('3. Edge Function Raw Response:', response);
+            
+            if (response.error) throw response.error;
+            
         }
         catch (error) {
-            console.log(error.message)
+            console.error('4. Error removing admin:', error);
         }
-
     }
+
     static async approveUser(userID){
         console.log('Approving user via RPC')
         try {

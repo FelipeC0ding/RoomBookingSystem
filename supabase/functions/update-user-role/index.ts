@@ -1,46 +1,79 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-// Setup type definitions for built-in Supabase Runtime APIs
-import "@supabase/functions-js/edge-runtime.d.ts";
-import { withSupabase } from "@supabase/server";
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
-console.log("Hello from Functions!");
+serve(async (req) => {
+  // 1. Handle CORS for browser requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
 
-// This endpoint uses 'publishable' | 'secret' access, apiKey is required.
-// Use publishable for Client-facing, key-validated endpoints
-// Use secret for Server-to-server, internal calls
-export default {
-  fetch: withSupabase({ auth: ["publishable", "secret"] }, async (req, ctx) => {
-    // Called by another service with a secret key
-    // ctx.supabaseAdmin bypasses RLS — use for privileged operations
-    /*
-    if (ctx.authMode === "secret") {
-      const { user_id } = await req.json();
-      const { data } = await ctx.supabaseAdmin.auth.admin.getUserById(user_id);
+  try {
+    // 2. Create standard client using the caller's Auth token to verify WHO is making the request
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    )
 
-      return Response.json({
-        email: data?.user?.email,
-      });
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
+    if (authError || !user) throw new Error('Unauthorized')
+
+    const callerRole = user.app_metadata.role
+    const callerOrg = user.app_metadata.organisation_id
+
+    // Block non-admins instantly
+    if (callerRole !== 'admin') {
+      throw new Error('Only admins can change roles')
     }
-    */
 
-    const { name } = await req.json();
+    // 3. Parse the requested changes
+    const { target_user_id, new_role } = await req.json()
 
-    return Response.json({
-      message: `Hello ${name}!`,
-    });
-  }),
-};
+    // 4. Create an Admin client (Service Role) to bypass RLS and edit Auth metadata
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
 
-/* To invoke locally:
+    // Verify the target user belongs to the SAME organization as the admin
+    const { data: targetUser, error: targetError } = await supabaseAdmin
+      .from('User')
+      .select('OrganisationID')
+      .eq('UserID', target_user_id)
+      .single()
 
-  1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
-  2. Make an HTTP request:
+    if (targetError || targetUser.OrganisationID !== callerOrg) {
+      throw new Error('Cannot modify users outside your organization')
+    }
 
-  curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/update-user-role' \
-    --header 'apiKey: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH' \
-    --data '{"name":"Functions"}'
+    // 5. Update the target's JWT Auth Metadata (merges the new role, keeps the org ID)
+    const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(
+      target_user_id,
+      { app_metadata: { role: new_role, organisation_id: callerOrg } }
+    )
+    if (updateAuthError) throw updateAuthError
 
-*/
+    // 6. Update the Public User table so the UI reflects the change immediately
+    const { error: dbError } = await supabaseAdmin
+      .from('User')
+      .update({ Role: new_role })
+      .eq('UserID', target_user_id)
+    if (dbError) throw dbError
+
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    })
+
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400,
+    })
+  }
+})
