@@ -106,10 +106,11 @@ export default class FetchDAL {
     static async makeAdmin(userID) {
         console.log('UserID to be admin', userID)
         try {
-            const { error } = await supabase
-                .from('User')
-                .update({ 'Role': 'admin' })
-                .eq('UserID', userID)
+            const { error } = await supabase.rpc('update_user_role', {
+                target_user_id: userID,
+                new_role: 'admin'
+            })
+            if (error) throw error;
         }
         catch (error) {
             console.log(error.message)
@@ -119,10 +120,11 @@ export default class FetchDAL {
     static async removeAdmin(userID) {
         console.log('UserID to have admin revoked', userID)
         try {
-            const { error } = await supabase
-                .from('User')
-                .update({ 'Role': 'standard' })
-                .eq('UserID', userID)
+            const { error } = await supabase.rpc('update_user_role', {
+                target_user_id: userID,
+                new_role: 'standard'
+            })
+            if (error) throw error;
         }
         catch (error) {
             console.log(error.message)
@@ -130,17 +132,16 @@ export default class FetchDAL {
 
     }
     static async approveUser(userID){
-        console.log('Approving user')
+        console.log('Approving user via RPC')
         try {
-            const { error } = await supabase
-                .from('User')
-                .update({ 'Confirmed': true })
-                .eq('UserID', userID)
+            const { error } = await supabase.rpc('approve_user', {
+                target_user_id: userID
+            })
+            if (error) throw error;
         }
         catch (error) {
             console.log(error.message)
         }
-
     }
 
     s
