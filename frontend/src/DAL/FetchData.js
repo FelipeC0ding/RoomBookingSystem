@@ -21,32 +21,6 @@ export default class FetchDAL {
         // Execute deletions concurrently for better performance
         await Promise.all(keysToDelete.map(key => cacheDelete(key)));
     }
-
-    static async AddUser(userID,email, firstname, surname, OrganisationID, departmentID) {
-        try {
-            const role = 'standard'
-            const { error: dbError } = await supabase
-                .from('User')
-                .insert([{
-                    UserID: userID,
-                    UserEmail: email,
-                    Firstname: firstname,
-                    Surname: surname,
-                    Role: role,
-                    DepartmentID: departmentID,
-                    OrganisationID: OrganisationID,
-                    Confirmed: false
-                }]);
-
-            if (dbError) throw dbError;
-
-        }
-        catch (error) {
-            console.log('user creation error', error)
-
-            console.error('User creation flow interrupted:', error.message);
-        }
-    }
     
     static async getAllUsers() {
         const { data, error } = await supabase
@@ -152,7 +126,7 @@ export default class FetchDAL {
         }
     }
 
-    s
+    
     static async ApproveRequest(userID) {
         console.log('UserID to be approved', userID)
         try {

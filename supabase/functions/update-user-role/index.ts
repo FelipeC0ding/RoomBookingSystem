@@ -7,7 +7,6 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // 1. Handle CORS for browser requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -23,7 +22,8 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
     if (authError || !user) throw new Error('Unauthorized')
 
-    const callerRole = user.app_metadata.role
+    // CHANGED: Now looks for user_role instead of role
+    const callerRole = user.app_metadata.user_role
     const callerOrg = user.app_metadata.organisation_id
 
     // Block non-admins instantly
@@ -51,10 +51,11 @@ serve(async (req) => {
       throw new Error('Cannot modify users outside your organization')
     }
 
-    // 5. Update the target's JWT Auth Metadata (merges the new role, keeps the org ID)
+    // 5. Update the target's JWT Auth Metadata
+    // CHANGED: Saves the new role under the 'user_role' key
     const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(
       target_user_id,
-      { app_metadata: { role: new_role, organisation_id: callerOrg } }
+      { app_metadata: { user_role: new_role, organisation_id: callerOrg } }
     )
     if (updateAuthError) throw updateAuthError
 
