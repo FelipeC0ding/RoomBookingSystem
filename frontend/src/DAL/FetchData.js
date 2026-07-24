@@ -1,4 +1,3 @@
-import { data } from 'autoprefixer';
 import { supabase } from '../supabaseClient';
 import { cacheGet, cacheSet, cacheDelete } from '../lib/cache.js'; 
 
@@ -20,13 +19,18 @@ export default class FetchDAL {
     }
     
     static async getAllUsers() {
-        const { data, error } = await supabase
-            .from('User')
-            .select(`*`);
+        try {
+            const { data, error } = await supabase.rpc('get_users_in_my_org');
 
-        if (error) throw error;
-        console.log('All Users', data)
-        return data;
+            if (error) throw error;
+            
+            console.log('My Organization Users:', data);
+            return data;
+            
+        } catch (error) {
+            console.error('Error fetching users:', error.message);
+            return null;
+        }
     }
     static async getUserData() 
     {
@@ -46,32 +50,35 @@ export default class FetchDAL {
         }
     }
     static async getCurrentUser() {
-        let user = await this.getUserData();
-        let uid = user.id
-        console.log('ID -', uid);
-        const { data, error } = await supabase
-            .from('User')
-            .select('*')
-            .eq('UserID', uid)
-            .single()
+        try {
+            const { data, error } = await supabase
+                .rpc('get_my_profile')
+                .single(); 
 
-        if (error) {
-            throw error
-        } else {
-            console.log('SUCCESS: USER', data);
+            if (error) throw error;
+            
+            console.log('SUCCESS: MY PROFILE', data);
+            return data;
+            
+        } catch (error) {
+            console.error('Error fetching current user:', error.message);
+            return null;
         }
-
-        return data
     }
 
-    static async loggedInOrgID()
-    {
-        let currentUser = await this.getCurrentUser()
-        let result = currentUser.OrganisationID;
-        result = parseInt(result)
-        console.log('Returned user', currentUser)
-        console.log('RESUT', result)
-        return result
+    static async loggedInOrgID() {
+        try {
+            const { data: { session }, error } = await supabase.auth.getSession();
+            
+            if (error || !session) throw error || new Error("No active session");
+            let result = session.user.app_metadata.organisation_id;
+            console.log('RESULT (from JWT):', result);
+            return result;
+            
+        } catch (error) {
+            console.error('Error reading JWT for Org ID:', error.message);
+            return null;
+        }
     }
 
     static async makeAdmin(userID) {
@@ -300,323 +307,293 @@ export default class FetchDAL {
     }
 
     static async updateBooking(bookingID, title, description) {
-        console.log(bookingID, title, description);
+        console.log('Updating:', bookingID, title, description);
         try {
-            let user = await this.getUserData();
-            
-            const { error } = await supabase
-                .from('Booking')
-                .update({ 'Title': title, 'Description': description })
-                .eq('BookingID', bookingID);
+            const { data: success, error } = await supabase
+                .rpc('update_my_booking', {
+                    p_booking_id: bookingID,
+                    p_title: title,
+                    p_description: description
+                });
             
             if (error) {
-                console.log(error.message);
+                console.error('Database error:', error.message);
                 return;
             }
 
+            if (!success) {
+                console.warn('Update failed: Booking not found or permission denied.');
+                return;
+            }
+
+            let user = await this.getUserData();
             if (user) {
                 await this.invalidateBookingCaches(user.id);
             }
 
         } catch (error) {
-            console.log(error.message);
+            console.error('Caught error:', error.message);
         }
     }
     static async fetchUserBookings(userId) {
         const cacheKey = `bookings:user:${userId}`;
         const cachedBookings = await cacheGet(cacheKey);
-        
         if (cachedBookings) return cachedBookings;
 
-        const { data, error } = await supabase
-            .from('Booking')
-            .select(`*, Room ( RoomName, Capacity )`)
-            .eq('UserID', userId)
-            .order('BookingDate', { ascending: false });
-
+        const { data, error } = await supabase.rpc('get_my_bookings');
         if (error) throw error;
         
-        await cacheSet(cacheKey, data, 300); 
-        return data;
+        // Map the flat SQL response back into the nested shape the UI expects
+        const formattedData = (data || []).map(b => ({
+            ...b,
+            Room: { RoomName: b.RoomName, Capacity: b.Capacity }
+        }));
+
+        await cacheSet(cacheKey, formattedData, 300); 
+        return formattedData;
     }
 
     static async fetchBookings(bookingDate) {
         try {
-            const { data, error } = await supabase
-                .from('Booking')
-                .select(`
-                *,
-                User (
-                    Firstname,
-                    Surname,
-                    UserEmail
-                )
-            `)
-                .eq('BookingDate', bookingDate);
+            const { data, error } = await supabase.rpc('get_org_bookings_by_date', {
+                p_date: bookingDate
+            });
+            if (error) throw error;
 
-            console.log('Bookings', data)
-            return data
+            const formattedData = (data || []).map(b => ({
+                ...b,
+                User: { Firstname: b.Firstname, Surname: b.Surname, UserEmail: b.UserEmail }
+            }));
 
-        }
-        catch (error) {
-            console.log(error.message)
+            console.log('Secure Date Bookings:', formattedData);
+            return formattedData;
+
+        } catch (error) {
+            console.error('Fetch Date Bookings Error:', error.message);
         }
     }
 
     static async fetchBookingsWeek(roomID, startDate, endDate) {
         try {
-            const { data, error } = await supabase
-                .from('Booking')
-                .select(`
-                *,
-                User (
-                    Firstname,
-                    Surname,
-                    UserEmail
-                )
-            `)
-                .eq('RoomID', roomID)
-                .gte('BookingDate', startDate)
-                .lte('BookingDate', endDate);
+            const { data, error } = await supabase.rpc('get_org_bookings_by_room', {
+                p_room_id: parseInt(roomID),
+                p_start_date: startDate,
+                p_end_date: endDate
+            });
+            if (error) throw error;
 
-            console.log('Bookings for the week for room ID', roomID, '      ', data)
-            return data
+            // Map user details into a nested object
+            const formattedData = (data || []).map(b => ({
+                ...b,
+                User: { Firstname: b.Firstname, Surname: b.Surname, UserEmail: b.UserEmail }
+            }));
 
-        }
-        catch (error) {
-            console.log(error.message)
+            console.log(`Secure Week Bookings (Room ${roomID}):`, formattedData);
+            return formattedData;
+
+        } catch (error) {
+            console.error('Fetch Week Bookings Error:', error.message);
         }
     }
 
     static async fetchAllBookings() {
         try {
-            const { data, error } = await supabase
-                .from('Booking')
-                .select(`
-                *`
-                )
+            const { data, error } = await supabase.rpc('get_all_org_bookings');
+            if (error) throw error;
 
-            console.log('Bookings', data)
-            return data
-        }
-        catch (error) {
-            console.log(error.message)
+            console.log('Secure All Org Bookings:', data);
+            return data;
+        } catch (error) {
+            console.error('Fetch All Bookings Error:', error.message);
         }
     }
 
     static async GetSchools() {
         const cacheKey = 'orgs:schools:active';
-        
-        // 1. Check Cache
+
         const cachedSchools = await cacheGet(cacheKey);
         if (cachedSchools) {
             console.log('SUCCESS (Cache): Schools');
             return cachedSchools;
         }
 
-        // 2. Fetch from Supabase on cache miss
-        console.log("--- Executing Supabase fetch ---");
-        const { data, error } = await supabase
-            .from('Organisation')
-            .select('OrganisationID,Name,StartTime,FinishTime,IntervalDuration,IntervalName,LunchStart, LunchEnd, BreakStart, BreakEnd')
-            .eq('LisenceStatus', true)
+        console.log("--- Executing Secure RPC fetch ---");
+        const { data, error } = await supabase.rpc('get_active_schools');
 
-        if (error) throw error;
+        if (error) {
+            console.error('Error fetching active schools:', error.message);
+            throw error;
+        }
         
-        // 3. Set Cache (e.g., cache for 1 hour / 3600 seconds)
         await cacheSet(cacheKey, data, 3600);
         console.log('SUCCESS (DB):', data);
         
         return data;
     }
-
     static async getRooms() {
         console.log('Getting Rooms');
-        let userConfirmed = await this.getCurrentUser();
-        let orgID = userConfirmed.OrganisationID;
-        
-        if (!userConfirmed.Confirmed) return null;
+        let orgID = await this.loggedInOrgID();
+        if (!orgID) return null;
 
         const cacheKey = `rooms:org:${orgID}`;
         
-        // 1. Check Cache
         const cachedRooms = await cacheGet(cacheKey);
         if (cachedRooms) return cachedRooms;
 
-        // 2. Fetch from Supabase
-        const { data, error } = await supabase
-            .from('Room')
-            .select('*')
-            .eq('IsAvailable', true)
-            .eq('OrganisationID', orgID);
+        // Secure RPC call - Database determines what they are allowed to see
+        const { data, error } = await supabase.rpc('get_rooms_in_my_org');
 
         if (error) {
-            console.log(error.message, error.code);
+            console.error('Error fetching rooms:', error.message);
             return null;
         }
 
-        // 3. Set Cache
         await cacheSet(cacheKey, data, 3600);
         return data;
     }
 
     static async AddNewRoom(title, location, capacity, features) {
         try {
-            let capacityFormatted = parseInt(capacity);
-            let orgID = await this.loggedInOrgID();
-            orgID = parseInt(orgID);
-            
-            const { error } = await supabase
-                .from('Room')
-                .insert({ 
-                    RoomName: title, 
-                    Capacity: capacityFormatted, 
-                    IsAvailable: true, 
-                    Location: location, 
-                    Features: features, 
-                    OrganisationID: orgID 
-                });
+            const { data: success, error } = await supabase.rpc('insert_room_admin', {
+                p_room_name: title,
+                p_location: location,
+                p_capacity: parseInt(capacity),
+                p_features: features
+            });
                 
             if (error) throw error;
+            if (!success) {
+                console.warn('Room creation rejected: Insufficient permissions.');
+                return;
+            }
 
-            // INVALIDATE: The room list for this org has changed
+            let orgID = await this.loggedInOrgID();
             await cacheDelete(`rooms:org:${orgID}`);
             
         } catch (error) {
-            console.log(error.message);
-        }
-    }
-
-    static async deleteRoom(roomID) {
-        let id = parseInt(roomID);
-        // We need the orgID to invalidate the cache. You might need to fetch the room first 
-        // to know which org it belongs to, or clear a global room cache if you change your key structure.
-        let orgID = await this.loggedInOrgID(); 
-
-        const { error } = await supabase
-            .from('Room')
-            .delete()
-            .eq('RoomID', id);
-            
-        if (error) {
-            console.log(error.message, error.code);
-        } else {
-            // INVALIDATE
-            await cacheDelete(`rooms:org:${orgID}`);
+            console.error('Add Room Error:', error.message);
         }
     }
 
     static async UpdateRooms(id, roomName, location, capacity, features) {
-        console.log('Saving room changes', id, roomName, location, capacity, features)
+        console.log('Saving room changes', id, roomName);
+        try {
+            const { data: success, error } = await supabase.rpc('update_room_admin', {
+                p_room_id: parseInt(id),
+                p_room_name: roomName,
+                p_location: location,
+                p_capacity: parseInt(capacity),
+                p_features: features
+            });
 
-        const { error } = await supabase
-            .from('Room')
-            .update({ 'RoomName': roomName, 'Location': location, 'Capacity': parseInt(capacity), 'Features': features })
-            .eq('RoomID', parseInt(id))
-        if (error) {
-            console.log(error.message, error.code)
-        } else {
-            console.log('SUCCESS:', data);
+            if (error) throw error;
+            if (!success) {
+                console.warn('Update rejected: Insufficient permissions or room not found.');
+                return null;
+            }
+
+            let orgID = await this.loggedInOrgID();
+            await cacheDelete(`rooms:org:${orgID}`);
+            return true;
+            
+        } catch (error) {
+            console.error('Update Room Error:', error.message);
+            return null;
         }
+    }
 
-        return data
+    static async deleteRoom(roomID) {
+        try {
+            const { data: success, error } = await supabase.rpc('delete_room_admin', {
+                p_room_id: parseInt(roomID)
+            });
+            
+            if (error) throw error;
+            if (!success) {
+                console.warn('Delete rejected: Insufficient permissions or room not found.');
+                return;
+            }
+
+            let orgID = await this.loggedInOrgID();
+            await cacheDelete(`rooms:org:${orgID}`);
+            
+        } catch (error) {
+            console.error('Delete Room Error:', error.message);
+        }
     }
 
     static async GetOrganisationID(Name) {
-        console.log("--- Executing Dept fetch ---");
-        const { data, error } = await supabase
-            .from('Organisation')
-            .select('OrganisationID')
-            .eq('Name', Name)
-            .single()
+        console.log("--- Executing Secure Org ID fetch ---");
+        try {
+            const { data, error } = await supabase.rpc('get_organisation_id_by_name', {
+                p_name: Name
+            });
 
-        if (error) {
-            throw error
-        }
-        console.log('IMPORTANT:', data);
+            if (error) throw error;
+            if (!data) throw new Error("Organization not found");
+            
+            console.log('IMPORTANT:', data);
+            return data;
 
-        return data.OrganisationID
-    }
-
-    static async GetDepartments(organisationID) {
-        const { data, error } = await supabase
-            .from('Department')
-            .select('DepartmentID,Name')
-            .eq('OrganisationID', organisationID); 
-
-        if (error) {
-            console.log(error);
+        } catch (error) {
+            console.error('Error fetching Organisation ID:', error.message);
             throw error;
-        } else {
-            console.log("Fetched Departments for Org ID:", organisationID);
         }
-
-        return data;
     }
 
-    static async GetDepartmentID(Name) {
-        console.log("--- Executing DeptID fetch ---");
-        const { data, error } = await supabase
-            .from('Department')
-            .select('DepartmentID')
-            .eq('Name', Name)
-            .single()
+    static async GetDepartments() {
+        console.log("--- Executing Secure Dept fetch ---");
+        try {
+            const { data, error } = await supabase.rpc('get_departments_in_my_org');
 
-        if (error) {
-            console.log(error)
-            throw error
-        } else {
-            console.log('Name', Name);
+            if (error) {
+                throw error;
+            } 
+            
+            console.log("Fetched Departments securely:", data);
+            return data;
+
+        } catch (error) {
+            console.error("Error fetching departments:", error.message);
+            return null;
         }
+    }
 
-        return data.DepartmentID
+    
+    static async GetDepartmentID(Name) {
+        const departments = await this.GetDepartments();
+        const dept = departments.find(d => d.Name === Name);
+        return dept ? dept.DepartmentID : null;
     }
 
     static async GetDepartmentName(id) {
-        const { data, error } = await supabase
-            .from('Department')
-            .select('Name')
-            .eq('DepartmentID', parseInt(id))
-            .single()
-
-        if (error) {
-            console.log(error)
-            throw error
-        }
+        const departments = await this.GetDepartments();
+        const dept = departments.find(d => d.DepartmentID === parseInt(id));
+        return dept ? dept.Name : null;
     }
 
     static async deleteBooking(bookingID) {
         try {
-            let id = parseInt(bookingID);
-            console.log(bookingID);
             let user = await this.getUserData();
             
-            // Optional: Fetch the booking first so we know which room cache to clear
-            const { data: bookingToDel } = await supabase
-                .from('Booking')
-                .select('RoomID')
-                .eq('BookingID', id)
-                .single();
-                
-            const roomID = bookingToDel ? bookingToDel.RoomID : null;
-
-            const { error } = await supabase
-                .from('Booking')
-                .delete()
-                .eq('BookingID', id);
+            const { data, error } = await supabase.rpc('delete_my_booking', {
+                p_booking_id: bookingID
+            });
             
-            if (error) {
-                console.log('deleting user error-', error.message);
+            if (error) throw error;
+            if (!data.success) {
+                console.error('Delete rejected:', data.error);
                 return;
             }
 
-            // INVALIDATE CACHE
-            if (user) {
+            const roomID = data.room_id;
+
+            if (user && roomID) {
                 await this.invalidateBookingCaches(user.id, roomID);
             }
 
         } catch (error) {
-            console.log('deleting booking error-', error.message);
+            console.error('Deleting booking error:', error.message);
         }
     }
 }
