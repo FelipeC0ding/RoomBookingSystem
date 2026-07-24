@@ -5,20 +5,17 @@ import { cacheGet, cacheSet, cacheDelete } from '../lib/cache.js';
 export default class FetchDAL {
 
     static async invalidateBookingCaches(userID, roomID = null) {
-        // Core keys that always need clearing
         const keysToDelete = [
             `bookings:user:${userID}`,
             'bookings:all' 
         ];
         
-        // If a roomID is provided, clear room-specific caches too
         if (roomID) {
             keysToDelete.push(`bookings:room:${roomID}`);
         }
 
         console.log('Invalidating booking caches:', keysToDelete);
         
-        // Execute deletions concurrently for better performance
         await Promise.all(keysToDelete.map(key => cacheDelete(key)));
     }
     
@@ -126,33 +123,6 @@ export default class FetchDAL {
         }
     }
 
-    
-    static async ApproveRequest(userID) {
-        console.log('UserID to be approved', userID)
-        try {
-            const { error } = await supabase
-                .from('User')
-                .update({ 'Role': 'standard' })
-                .eq('UserID', userID)
-        }
-        catch (error) {
-            console.log(error.message)
-        }
-    }
-
-    static async DenyRequest(userID) {
-        console.log('UserID to be denied', userID)
-        try {
-            const { error } = await supabase
-                .from('User')
-                .update({ 'Role': 'standard' })
-                .eq('UserID', userID)
-        }
-        catch (error) {
-            console.log(error.message)
-        }
-
-    }
     static async checkWeekendDate(checkDate){
         if (this.isWeekend(checkDate)) {
             let jump = (checkDate.getDay() === 6) ? 2 : 1;
@@ -160,8 +130,42 @@ export default class FetchDAL {
         }
         return checkDate
     }
-    static async createDailyBooking(userID, description, roomID, startBookingDate, duration, title, recurrenceLength, dateBooked) {
-        const timings = duration.split(" - ");
+
+    static async executeSecureBooking(roomID, datesArray, duration, title, description) {
+        try {
+            const user = await this.getUserData();
+            const [startTime, endTime] = duration.split(" - ");
+            const dateBooked = new Date().toISOString().split('T')[0];
+            
+            // Fire the single payload to the database
+            const { data, error } = await supabase.rpc('create_bookings_batch', {
+                p_room_id: parseInt(roomID),
+                p_user_id: user.id,
+                p_booking_dates: datesArray,
+                p_start_time: startTime + ':00',
+                p_end_time: endTime + ':00',
+                p_title: title,
+                p_description: description,
+                p_created_time: dateBooked
+            });
+
+            if (error) throw error;
+
+            if (!data.success) {
+                console.error(data.error); 
+                return { isValid: false, error: data.error };
+            }
+
+            await this.invalidateBookingCaches(user.id, roomID);
+            return { isValid: true };
+
+        } catch (error) {
+            console.error("Booking Error:", error.message);
+            return { isValid: false, error: "System error occurred." };
+        }
+    }
+
+    static async createDailyBooking(description, roomID, startBookingDate, duration, title, recurrenceLength) {
         let checkDate = new Date(startBookingDate);
         let datesToBook = [];
 
@@ -174,42 +178,11 @@ export default class FetchDAL {
             checkDate.setDate(checkDate.getDate() + 1);
         }
 
-        const { data, error: checkError } = await supabase
-            .from('Booking')
-            .select('BookingDate')
-            .eq('RoomID', parseInt(roomID))
-            .eq('BookingStartTime', timings[0] + ':00')
-            .in('BookingDate', datesToBook); 
+        return await this.executeSecureBooking(roomID, datesToBook, duration, title, description);
+    }
 
-        if (checkError) return false;
-        if (data && data.length > 0) {
-            console.log("Conflicts found on:", data);
-            errorMessage = 'Conflicts found on: ${data}';
-            return { isValid: false, error: errorMessage };
-        }
-
-
-        const rowsToInsert = datesToBook.map(dateStr => ({
-            Description: description,
-            RoomID: roomID,
-            UserID: userID,
-            BookingDate: dateStr,
-            BookingStartTime: timings[0],
-            BookingEndTime: timings[1],
-            CreatedTimeStamp: dateBooked,
-            Title: title
-        }));
-
-        const { error: insertError } = await supabase
-            .from('Booking')
-            .insert(rowsToInsert);
-
-        if (insertError) {
-            console.error("Bulk insert failed:", insertError);
-            return false;
-        }
-
-        return true;
+    static async createBooking(description, roomID, bookingDate, duration, title) {
+        return await this.executeSecureBooking(roomID, [bookingDate], duration, title, description);
     }
     static formatDates(dateList){
         let formattedList = []
@@ -224,107 +197,31 @@ export default class FetchDAL {
         return formattedList
     }
     static async createMonthlyRecurringBooking(description, roomID, bookingDate, duration, title, frequency, recurrenceLength, monthlyOrdinal, monthlyWeekday, monthlyType, skipweekend) {
-        const timings = duration.split(" - ");
-        let date = new Date(bookingDate);
-        let user = await this.getUserData();
-        let userID = user.id;
-        const dateBooked = new Date().toISOString().split('T')[0];
+        let datesToBook = [];
 
         if (monthlyType.toLowerCase() === 'fixed') {
-
-            let datesToBook = [];
             let tempDate = new Date(bookingDate);
-            const originalDay = tempDate.getDate(); // Store the day (e.g., 15)
+            const originalDay = tempDate.getDate(); 
 
             for (let i = 0; i < recurrenceLength; i++) {
                 datesToBook.push(tempDate.toISOString().split('T')[0]);
                 tempDate.setMonth(tempDate.getMonth() + 1);
+                
                 if (tempDate.getDate() !== originalDay) {
                     tempDate.setDate(0); 
                 }
             }
-
-            console.log('DATES for fixed:', datesToBook)
-
-            const { data, error } = await supabase
-                .from('Booking')
-                .select('BookingDate')
-                .eq('RoomID', parseInt(roomID))
-                .eq('BookingStartTime', timings[0] + ':00')
-                .in('BookingDate', datesToBook); 
-
-            if (error) return false;
-            if (data && data.length > 0) {
-                console.log("Conflicts found on:", data);
-                return false;
-            }
-
-            for (let index = 0; index < recurrenceLength; index++) {
-                const { error } = await supabase
-                    .from('Booking')
-                    .insert({
-                        Description: description,
-                        RoomID: roomID,
-                        UserID: userID,
-                        BookingDate: date.toISOString().split('T')[0],
-                        BookingStartTime: timings[0],
-                        BookingEndTime: timings[1],
-                        CreatedTimeStamp: dateBooked,
-                        Title: title
-                    });
-
-                if (error) {
-                    console.log(error.message)
-                    return false
-                }
-                console.log(date);
-                date.setMonth(date.getMonth() + 1);
-            }
-            return true
-        }
+        } 
         else if (monthlyType.toLowerCase() === 'ordinal') {
             let bookingDates = await this.createOrdinalDates(bookingDate, monthlyWeekday, monthlyOrdinal, recurrenceLength, skipweekend);
-            let dateStrings = this.formatDates(bookingDates); 
-            
-           const { data: conflicts, error: checkError } = await supabase
-                .from('Booking')
-                .select('BookingDate')
-                .eq('RoomID', parseInt(roomID))
-                .eq('BookingStartTime', timings[0] + ':00')
-                .in('BookingDate', dateStrings);
-
-            if (checkError){
-                console.log(error.message)
-                return false   
-            };
-            
-            if (conflicts && conflicts.length > 0) {
-                console.log("Conflicts found on these dates:", conflicts);
-                return false; 
-            }
-
-            const rowsToInsert = dateStrings.map(dateStrings => ({
-                Description: description,
-                RoomID: roomID,
-                UserID: userID,
-                BookingDate: dateStrings,
-                BookingStartTime: timings[0],
-                BookingEndTime: timings[1],
-                CreatedTimeStamp: dateBooked,
-                Title: title
-            }));
-
-            const { error: insertError } = await supabase
-                .from('Booking')
-                .insert(rowsToInsert); 
-
-            if (insertError) {
-                console.error("Bulk insert failed:", insertError.message);
-                return false;
-            }
-
-            return true; 
+            datesToBook = this.formatDates(bookingDates); 
         }
+
+        if (datesToBook.length === 0) {
+            return { isValid: false, error: "Could not generate valid dates." };
+        }
+
+        return await this.executeSecureBooking(roomID, datesToBook, duration, title, description);
     }
 
     static createOrdinalDates(bookingDate, targetDay, targetOrdinal, recurrenceLength, skipweekend) {
@@ -378,131 +275,30 @@ export default class FetchDAL {
             return false
         }
     }
-    static async createWeeklyBooking(userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked){
+    static async createWeeklyBooking(description, roomID, bookingDate, duration, title, recurrenceLength) {
         let spacing = 7;
-        console.log('Processing Weekly');
-        try{
-            const timings = duration.split(" - ");
-            let currentBookings = await this.fetchAllBookings();
-            let spaceFree = true;
-
-            console.log("--- Executing booking Insert for recurrence ---");
-            for (let index = 0; index < recurrenceLength; index++) {
-                let date = new Date(bookingDate);
-                date.setDate(date.getDate() + (spacing * index));
-
-                for (let i = 0; i < (currentBookings).length; i++) {
-                    let currentDate = currentBookings[i].BookingDate
-                    let newbookingDate = date.toISOString().split('T')[0]
-                    let RoomID = parseInt(currentBookings[i].RoomID)
-                    roomID = parseInt(roomID)
-                    let currentTime = currentBookings[i].BookingStartTime.substring(0, 5);
-                    if (currentDate === newbookingDate && RoomID === roomID && currentTime === timings[0]) {
-                        console.log("Slot has been booked on", newbookingDate)
-                        spaceFree = false;
-                        break;
-                    }
-                }
-                if (!spaceFree){
-                    return false;
-                } 
-
-
-            }
-            if (spaceFree) {
-                for (let index = 0; index < recurrenceLength; index++) {
-                    let date = new Date(bookingDate);
-                    date.setDate(date.getDate() + (spacing * index));
-                    const { error } = await supabase
-                        .from('Booking')
-                        .insert({
-                            Description: description,
-                            RoomID: roomID,
-                            UserID: userID,
-                            BookingDate: date.toISOString().split('T')[0],
-                            BookingStartTime: timings[0],
-                            BookingEndTime: timings[1],
-                            CreatedTimeStamp: dateBooked,
-                            Title: title
-                        });
-
-                    if (error){
-                        console.log(error.message)
-                        return false;
-                    } 
-                }
-                return true;
-            }
-            console.log(await this.fetchUserBookings());
-            return false;
+        let datesToBook = [];
+        
+        for (let index = 0; index < recurrenceLength; index++) {
+            let date = new Date(bookingDate);
+            date.setDate(date.getDate() + (spacing * index));
+            datesToBook.push(date.toISOString().split('T')[0]);
         }
-        catch(error){
-            console.log(error.message)
-        }       
+
+        return await this.executeSecureBooking(roomID, datesToBook, duration, title, description);
     }
 
     static async createRecurringBooking(description, roomID, bookingDate, duration, title, frequency, recurrenceLength, skipweekend) {
-        try {
-            let bookingCreated = true;
-            let user = await this.getUserData();
-            let userID = user.id;
-            const dateBooked = new Date().toISOString().split('T')[0];
-            const freq = frequency.toLowerCase();
+        const freq = frequency.toLowerCase();
 
-            if (freq === 'daily') {
-                console.log('Processing Daily');
-                bookingCreated = await this.createDailyBooking(userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked, skipweekend);
-            }
-            else if (freq === 'weekly') {
-                bookingCreated = await this.createWeeklyBooking(userID, description, roomID, bookingDate, duration, title, recurrenceLength, dateBooked, skipweekend);
-            }
-
-            // INVALIDATE CACHE if successful
-            if (bookingCreated) {
-                await this.invalidateBookingCaches(userID, roomID);
-            }
-
-            return bookingCreated;
-
-        } catch (error) {
-            console.error("Recurrence Error:", error.message);
+        if (freq === 'daily') {
+            return await this.createDailyBooking(description, roomID, bookingDate, duration, title, recurrenceLength);
+        }
+        else if (freq === 'weekly') {
+            return await this.createWeeklyBooking(description, roomID, bookingDate, duration, title, recurrenceLength);
         }
     }
 
-    static async createBooking(description, roomID, bookingDate, duration, title) {
-        try {
-            let user = await this.getUserData();
-            let userID = user.id;
-            const date = new Date();
-            const dateBooked = date.toISOString().split('T')[0];
-            const timings = duration.split(" - ");
-            
-            console.log("--- Executing booking Insert ---");
-            const { error } = await supabase
-                .from('Booking')
-                .insert({
-                    Description: description,
-                    RoomID: roomID,
-                    UserID: userID,
-                    BookingDate: bookingDate,
-                    BookingStartTime: timings[0],
-                    BookingEndTime: timings[1],
-                    CreatedTimeStamp: dateBooked,
-                    Title: title
-                });
-
-            if (error) {
-                console.log(error.message);
-                return;
-            }
-
-            // INVALIDATE CACHE
-            await this.invalidateBookingCaches(userID, roomID);
-
-        } catch (error) {
-            console.log(error.message);
-        }
-    }
     static async updateBooking(bookingID, title, description) {
         console.log(bookingID, title, description);
         try {
@@ -518,9 +314,6 @@ export default class FetchDAL {
                 return;
             }
 
-            // INVALIDATE CACHE
-            // We might not have the roomID immediately available in this context, 
-            // but we can at least clear the user's booking cache and the global cache.
             if (user) {
                 await this.invalidateBookingCaches(user.id);
             }
@@ -543,7 +336,6 @@ export default class FetchDAL {
 
         if (error) throw error;
         
-        // Cache user bookings for 5 minutes (300 seconds)
         await cacheSet(cacheKey, data, 300); 
         return data;
     }
