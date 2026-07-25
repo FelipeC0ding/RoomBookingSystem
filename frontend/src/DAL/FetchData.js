@@ -596,4 +596,45 @@ export default class FetchDAL {
             console.error('Deleting booking error:', error.message);
         }
     }
+
+    static async requestPasswordReset(email) {
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/update-password`,
+            });
+
+            if (error) {
+                console.error('Reset request error:', error.message);
+                // Intentionally do not expose errors to prevent user enumeration
+            }
+
+            return { 
+                success: true, 
+                message: "If an account exists, a recovery link has been sent to that email." 
+            };
+
+        } catch (error) {
+            console.error('System error:', error.message);
+            return { success: false, message: "An unexpected error occurred." };
+        }
+    }
+
+    // PHASE 2: Save the new password (called after user clicks email link)
+    static async updatePassword(newPassword) {
+        try {
+            const { error } = await supabase.auth.updateUser({
+                password: newPassword
+            });
+
+            if (error) throw error;
+            await supabase.auth.signOut();
+            
+            return { success: true };
+
+        } catch (error) {
+            console.error('Password update error:', error.message);
+            return { success: false, error: error.message };
+        }
+    }
+    
 }

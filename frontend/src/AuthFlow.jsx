@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 
-// Import your existing components
 import MainScreen from './MainScreen';
 import LoginPage from './LoginPage';
-import SignUpPage from './SignUp'; // Your invite/signup page
+import SignUpPage from './SignUp'; 
+import ForgotPassword from './ForgotPassword'; 
+import UpdatePassword from './UpdatePassword'; 
 
 function AuthFlow() {
     const [session, setSession] = useState(null);
@@ -63,6 +64,25 @@ function AuthFlow() {
                 <Route 
                     path="/SignUp" 
                     element={<SignUpPage />} 
+                />
+
+                {/* --- NEW: PASSWORD RESET PATHS --- */}
+                
+                {/* FORGOT PASSWORD:
+                   Accessible when not logged in to request a reset link.
+                */}
+                <Route 
+                    path="/forgot-password" 
+                    element={!session ? <ForgotPassword /> : <Navigate to="/MainScreen" />} 
+                />
+
+                {/* UPDATE PASSWORD:
+                   Must be accessible unconditionally because Supabase creates a 
+                   temporary session the moment the user clicks the email link.
+                */}
+                <Route 
+                    path="/update-password" 
+                    element={<UpdatePassword />} 
                 />
 
                 {/* MAIN APP PATH:

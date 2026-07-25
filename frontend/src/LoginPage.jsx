@@ -3,6 +3,7 @@ import { Mail, Lock, LogIn, ShieldCheck, UserPlus, ArrowRight } from 'lucide-rea
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient';
+import { Link } from 'react-router-dom';
 
 const INPUT_CONTAINER = "relative mb-1 w-full";
 const ICON_STYLE = "absolute left-3 top-1/2 -translate-y-1/2 text-gray-400";
@@ -88,9 +89,15 @@ function LoginPage() {
                         <div className="space-y-1">
                             <div className="flex justify-between items-center mb-1 ml-1">
                                 <label className="text-sm font-semibold text-gray-700">Password</label>
-                                <button type="button" className="text-xs text-blue-600 hover:text-blue-700 font-bold transition-colors">
+                                
+                                {/* Swapped the <button> for a <Link> */}
+                                <Link 
+                                    to="/forgot-password" 
+                                    className="text-xs text-blue-600 hover:text-blue-700 font-bold transition-colors"
+                                >
                                     Forgot Password?
-                                </button>
+                                </Link>
+                                
                             </div>
                             <div className={INPUT_CONTAINER}>
                                 <Lock size={18} className={ICON_STYLE} />
