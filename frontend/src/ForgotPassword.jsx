@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import FetchDAL from './FetchDAL';
+import FetchData from './DAL/FetchData';
 
 export default function ForgotPassword() {
     const [email, setEmail] = useState('');
@@ -11,7 +11,7 @@ export default function ForgotPassword() {
         setIsSubmitting(true);
         setStatus('');
 
-        const response = await FetchDAL.requestPasswordReset(email);
+        const response = await FetchData.requestPasswordReset(email);
         setStatus(response.message);
         setIsSubmitting(false);
     };

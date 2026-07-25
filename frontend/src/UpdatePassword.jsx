@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import FetchDAL from './FetchDAL';
+import FetchData from './DAL/FetchData';
 
 export default function UpdatePassword() {
     const [newPassword, setNewPassword] = useState('');
@@ -13,7 +13,7 @@ export default function UpdatePassword() {
         setIsSubmitting(true);
         setError('');
 
-        const response = await FetchDAL.updatePassword(newPassword);
+        const response = await FetchData.updatePassword(newPassword);
         
         if (response.success) {
             navigate('/login', { 

@@ -13,7 +13,6 @@ const INPUT_STYLE = `
   outline-none transition-all shadow-sm placeholder:text-gray-400
   text-black caret-black
 `;
-import { Link } from 'react-router-dom';
 function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
