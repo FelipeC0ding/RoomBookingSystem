@@ -273,6 +273,8 @@ function Menu(props) {
 
 // --- MAIN SCREEN COMPONENT ---
 function MainScreen() {
+    const [isLoading, setIsLoading] = useState(true);
+    const [isAccessDenied, setIsAccessDenied] = useState(false); // <-- New state for the strict security block
     const [roomFilter, setRoomFilter] = useState('');
     const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]);
     const [viewType, setViewType] = useState('day');
@@ -283,43 +285,58 @@ function MainScreen() {
     const [showError, setShowError] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     
-    const navigate = useNavigate(); // Initialize navigation
+    const navigate = useNavigate(); 
 
     useEffect(() => {
         async function loadInitialData() {
-            // 1. Check for a base auth session first
-            const { data: userSession } = await supabase.auth.getSession();
-            if (!userSession?.session) {
+            try {
+                // 1. Get the currently logged-in Auth user securely via Supabase
+                const { data: { user }, error: authError } = await supabase.auth.getUser();
+                
+                if (authError || !user) {
+                    navigate('/login');
+                    return;
+                }
+
+                // 2. Call the secure backend RPC instead of frontend SQL
+                const { data, error: profileError } = await supabase.rpc('get_my_profile');
+                
+                // RPCs return an array. Grab the first item if it exists.
+                const profile = data && data.length > 0 ? data[0] : null;
+
+                // 3. THE BLOCK: If they bypassed registration, deny access completely
+                if (profileError || !profile || !profile.Firstname) {
+                    console.warn("User bypassed signup. Denying access.");
+                    setErrorMessage("You do not have access. Your account isn't set up correctly. Please use your official invite link.");
+                    setShowError(true);
+                    setIsAccessDenied(true); // Lock the screen to render the block UI
+                    setIsLoading(false); // Clear the loading state so the error popup shows
+                    return; 
+                }
+
+                setUserRole(profile.Role ? profile.Role.toUpperCase() : 'STANDARD');
+                setUserConfirmed(profile.Confirmed);
+
+                const times = await timeCalcs.getTimeHeaders();
+                setTimePeriods(times);
+            } catch (error) {
+                console.error("Initialization error:", error);
                 navigate('/login');
-                return;
+            } finally {
+                if (!isAccessDenied) {
+                    setIsLoading(false);
+                }
             }
-
-            // 2. Fetch the database profile
-            const user = await fetchData.getCurrentUser();
-
-            // 3. THE ROUTE GUARD: Intercept incomplete profiles
-            if (!user || !user.Firstname || !user.DepartmentID) {
-                navigate('/complete-signup');
-                return; // Stop execution here
-            }
-
-            // 4. If they pass the guard, load the rest of the app
-            setUserRole(user.Role.toUpperCase());
-            setUserConfirmed(user.Confirmed);
-
-            const times = await timeCalcs.getTimeHeaders();
-            setTimePeriods(times);
         }
         
         loadInitialData();
-    }, [navigate]);
+    }, [navigate, isAccessDenied]);
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
-        navigate('/login'); // Ensure logout kicks them out visually
+        navigate('/login'); 
     };
 
-    // Centralized Navigation Handler
     const handleNavigation = (target) => {
         if (!userConfirmed) {
             setErrorMessage('Your account has not been verified. Please contact your IT admin.');
@@ -335,6 +352,34 @@ function MainScreen() {
 
         setActivePage(target);
     };
+
+    // --- Loading UI Intercept ---
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                <p className="text-slate-500 font-bold tracking-widest uppercase text-xs animate-pulse">
+                    Verifying Profile Details...
+                </p>
+            </div>
+        );
+    }
+
+    // --- Access Denied UI Intercept ---
+    if (isAccessDenied) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
+                <ErrorPopUp
+                    message={errorMessage}
+                    isOpen={showError}
+                    onClose={() => {
+                        setShowError(false);
+                        handleLogout(); // Instantly logs them out and redirects when they close the error
+                    }}
+                />
+            </div>
+        );
+    }
 
     // Conditional Page Rendering
     if (activePage === 'admin' && userRole === 'ADMIN' && userConfirmed) {

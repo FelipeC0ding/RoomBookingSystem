@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient';
 import { Link } from 'react-router-dom';
+import FetchData from './DAL/FetchData';
+import ErrorPopUp from './PopUps/ErrorPopUp.jsx';
 
 const INPUT_CONTAINER = "relative mb-1 w-full";
 const ICON_STYLE = "absolute left-3 top-1/2 -translate-y-1/2 text-gray-400";
@@ -18,24 +20,59 @@ function LoginPage() {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [authError, setAuthError] = useState(null);
-
+    const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
-    // 2. Handle the login logic LOCALLY
+
+    const [popupConfig, setPopupConfig] = useState({
+        isOpen: false,
+        type: 'error',
+        title: '',
+        message: ''
+    });
     const handleLogin = async (e) => {
-        e.preventDefault(); // Stop the page from reloading (The Flicker)
-        setLoading(true);
-        setAuthError(null);
+        e.preventDefault();
+        setIsLoading(true);
 
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email: email,
-            password: password,
-        });
+        try {
+            const { data, error: networkError } = await supabase.functions.invoke('login', {
+                body: { email, password }
+            });
 
-        if (error) {
-            setAuthError(error.message);
-            setLoading(false);
-        } 
+            // 1. Catch absolute network failures (e.g., no internet)
+            if (networkError) throw networkError;
+
+            // 2. Catch our custom Edge Function errors (Wrong password, Locked out)
+            if (data && data.error) {
+                setPopupConfig({
+                    isOpen: true,
+                    type: 'error',
+                    title: 'Login Issue',
+                    message: data.error // This is where "Account is temporarily locked" gets passed!
+                });
+                setIsLoading(false);
+                return; // Stop the function here so they don't log in
+            }
+
+            // 3. Success! Set the session in the browser and navigate
+            if (data && data.session) {
+                await supabase.auth.setSession(data.session);
+                // Navigate to your main screen
+                navigate('/'); 
+            }
+
+        } catch (err) {
+            console.error("Login Error:", err);
+            // Fallback popup for unexpected errors
+            setPopupConfig({
+                isOpen: true,
+                type: 'error',
+                title: 'System Error',
+                message: err.message || "An unexpected error occurred."
+            });
+        } finally {
+            setIsLoading(false);
+        }
     };
     
     return (
@@ -141,6 +178,13 @@ function LoginPage() {
                     </form>
                 </div>
             </div>
+
+            <ErrorPopUp 
+                isOpen={popupConfig.isOpen}
+                message={popupConfig.message}
+                onClose={() => setPopupConfig({ ...popupConfig, isOpen: false })}
+            />
+            
         </div>
     );
 }

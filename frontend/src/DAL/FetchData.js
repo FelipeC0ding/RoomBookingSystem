@@ -32,6 +32,7 @@ export default class FetchDAL {
             return null;
         }
     }
+
     static async getUserData() 
     {
         const { data, error } = await supabase.auth.getUser();
