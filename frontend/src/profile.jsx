@@ -354,31 +354,21 @@ function ProfilePage({ onGoBack }) {
 
                                 <div className="text-center md:text-left flex-1">
                                     <div className="flex flex-col gap-1">
-                                        <span className="text-blue-600 font-bold text-xs uppercase tracking-[0.2em] mb-1">User Profile</span>
+                                        <span className="text-blue-600 font-bold text-xs uppercase tracking-[0.2em] mb-1">Profile</span>
                                         <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-2">
                                             {user?.user_metadata?.Firstname || 'User'}
                                         </h1>
 
                                         <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
-                                            <span className="px-3 py-1 bg-slate-100 rounded-full text-slate-600 text-sm font-semibold border border-slate-200">
-                                                Department: {department || 'General Staff'}
-                                            </span>
                                             <span className="flex items-center gap-1.5 text-slate-400 text-sm font-medium">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                                                Click a day to see and edit its bookings
+                                                Click a date to view and edit bookings
                                             </span>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="hidden md:block w-px h-16 bg-slate-100 mx-4" />
-                                <div className="bg-slate-900 rounded-[2rem] p-8 text-center min-w-[180px] shadow-2xl shadow-slate-900/20 transform hover:-translate-y-1 transition-transform">
-                                    <p className="text-slate-400 text-[10px] uppercase tracking-[0.15em] font-black mb-2">Schedule</p>
-                                    <div className="flex flex-col">
-                                        <span className="text-white text-5xl font-black leading-none">{pendingCount}</span>
-                                        <span className="text-blue-400 text-[11px] font-bold mt-2 uppercase">Upcoming</span>
-                                    </div>
-                                </div>
+                                
                             </>
                         )}
                     </div>

@@ -60,7 +60,7 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", ro
             Make a booking
           </h3>
           <button
-            onClick={onClose}
+            onClick={() => onClose()}
             className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600"
           >
             <X size={20} />
@@ -203,7 +203,6 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", ro
                 )}
 
                 {/* NEW UI: Skip Weekends Toggle */}
-                {/* NEW UI: Skip Weekends Toggle */}
                 {frequency && (
                   <div className="space-y-2 mt-4 pt-4 border-t border-slate-200">
                     <label 
@@ -255,6 +254,7 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", ro
           <button
             onClick={async () => {
               let booked = true;
+              
               if (isRecurring) {
                 // Pass skipWeekends to the Monthly function
                 if (frequency === 'Monthly') {
@@ -265,7 +265,7 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", ro
                   console.log("Booking Result:", booked);
                   if (!booked.isValid) {
                     setErrorPopup(true);
-                    setErrorMessage('Booking could not be created. ${booked.error}');
+                    setErrorMessage(`Booking could not be created. ${booked.error}`); 
                     return;
                   }
                   onClose();
@@ -276,15 +276,30 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", ro
                     frequency, recurrenceLength, skipWeekends
                   );
                   console.log("Booking Result:", booked);
-                  if (!booked) {
+                  // FIXED: createRecurringBooking resolves to { isValid, error }, not a plain
+                  // boolean — the old `!booked` check could never be true for an object.
+                  if (!booked || !booked.isValid) {
                     setErrorPopup(true);
-                    setErrorMessage('Booking could not be created. Have any of these dates already been booked?');
+                    setErrorMessage(`Booking could not be created. ${booked?.error || 'Have any of these dates already been booked?'}`);
                     return;
                   }
                   onClose();
                 }
               } else {
-                await fetchData.createBooking(description, roomID, bookingDate, timeDuration, bookingTitle);
+
+                // --- SINGLE BOOKING LOGIC ---
+                const result = await fetchData.createBooking(description, roomID, bookingDate, timeDuration, bookingTitle);
+                console.log("Booking Result:", result);
+
+                // FIXED: createBooking resolves to { isValid, error } via executeSecureBooking,
+                // never a `.success` key — the old check (`result.success === false`) could
+                // never be true, so failed bookings silently closed with no error shown.
+                if (!result || !result.isValid) {
+                    setErrorPopup(true);
+                    setErrorMessage(`Booking could not be created. ${result?.error || 'Please try again.'}`);
+                    return;
+                }
+
                 onClose();
               }
             }}
@@ -296,13 +311,14 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", ro
           </button>
 
           <button
-            onClick={onClose}
+            onClick={() => onClose()}
             className="w-full py-3 px-4 rounded-2xl text-gray-500 font-bold transition-all duration-200 hover:bg-gray-50 hover:text-gray-800"
           >
             Cancel
           </button>
         </div>
       </div>
+      
       <ErrorPopup 
         isOpen={errorPopUp} 
         message={errorMessage} 

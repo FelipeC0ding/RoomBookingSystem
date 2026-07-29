@@ -173,7 +173,7 @@ function ManageUsers({ onGoBack }) {
                         onClick={() => setIsInviteModalOpen(true)}
                         className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-2xl font-black text-[12px] tracking-widest uppercase shadow-lg shadow-blue-200 hover:bg-blue-700 hover:-translate-y-0.5 transition-all"
                     >
-                        Invite Team
+                        Invite User
                     </button>
                 </div>
 
@@ -187,9 +187,9 @@ function ManageUsers({ onGoBack }) {
                     <table className="w-full text-left">
                         <thead>
                             <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 text-[10px] font-black tracking-widest">
-                                <th className="px-8 py-5">User Identity</th>
-                                <th className="px-8 py-5 text-center">Current Role</th>
-                                <th className="px-8 py-5 text-right">Actions</th>
+                                <th className="px-8 py-5">User</th>
+                                <th className="px-8 py-5 text-center">Role</th>
+                                <th className="px-8 py-5 text-right">Remove User</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -264,7 +264,7 @@ function ManageUsers({ onGoBack }) {
                                                                 onClick={() => setConfirmingDeleteId(null)} 
                                                                 className="bg-slate-100 text-slate-500 px-4 py-2 rounded-xl font-bold text-[10px] "
                                                             >
-                                                                No
+                                                                Cancel
                                                             </button>
                                                         </div>
                                                     ) : (

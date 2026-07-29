@@ -71,7 +71,7 @@ function AdminPage({ onGoBack }) {
                             Admin Page
                         </h1>
                         <p className="text-slate-500 text-sm md:text-base max-w-xl leading-relaxed">
-                            Manage system infrastructure, user permissions, and physical resources across the organization from a centralized hub.
+                            Manage Rooms and Users
                         </p>
                     </div>
 
@@ -84,8 +84,8 @@ function AdminPage({ onGoBack }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <NavCard 
                         icon={Users}
-                        title="User Management"
-                        description="Modify access levels, reset authentication credentials, and audit comprehensive user activity logs."
+                        title="Manage Users"
+                        description="Manage permissions, accounts and invites"
                         iconColor="text-blue-600"
                         badgeColor="bg-blue-50 text-blue-700"
                         onClick={() => setView('users')}
@@ -93,8 +93,8 @@ function AdminPage({ onGoBack }) {
 
                     <NavCard 
                         icon={Monitor}
-                        title="Resource Directory"
-                        description="Add new spaces to the directory, configure hardware specifications, and adjust room capacities."
+                        title="Manage Rooms"
+                        description="Add, remove, and edit rooms"
                         iconColor="text-emerald-600"
                         badgeColor="bg-emerald-50 text-emerald-700"
                         onClick={() => setView('rooms')}

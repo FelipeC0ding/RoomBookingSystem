@@ -101,7 +101,6 @@ function LoginPage() {
                             <ShieldCheck size={32} />
                         </div>
                         <h2 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">Sign In</h2>
-                        <p className="text-gray-500 mt-2 text-sm">Please enter your credentials to continue</p>
                     </div>
 
                     <form onSubmit={handleLogin} className="space-y-5">

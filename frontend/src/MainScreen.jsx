@@ -18,6 +18,15 @@ function Menu(props) {
     const [showError, setShowError] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
 
+    // --- DRAG TO SELECT LOGIC: STATE ---
+    const [dragState, setDragState] = useState({
+        isDragging: false,
+        colKey: null,
+        startIdx: -1,
+        currentIdx: -1,
+        item: null
+    });
+
     const weekDays = Array.from({ length: 7 }, (_, i) => {
         const d = new Date(props.viewDate);
         const dayOfWeek = d.getDay();
@@ -55,11 +64,15 @@ function Menu(props) {
         setShowError(true);
     };
 
-    const loadData = async () => {
-        setIsLoading(true);
+    // --- SILENT REFRESH SUPPORT ADDED HERE ---
+    const loadData = async (showLoadingScreen = true) => {
+        if (showLoadingScreen) {
+            setIsLoading(true);
+        }
+        
         const activeRoomID = selectedRoomForWeek || (rooms.length > 0 ? rooms[0].RoomID : null);
         if (!activeRoomID && props.viewType === 'week') {
-            setIsLoading(false);
+            if (showLoadingScreen) setIsLoading(false);
             return;
         }
 
@@ -76,15 +89,79 @@ function Menu(props) {
         } catch (error) {
             console.error("Failed to load bookings", error);
         } finally {
-            setTimeout(() => setIsLoading(false), 300);
+            if (showLoadingScreen) {
+                setTimeout(() => setIsLoading(false), 300);
+            }
         }
     };
 
     useEffect(() => {
         if (rooms.length > 0) {
-            loadData();
+            loadData(true); // Show loading screen when navigating dates/rooms
         }
     }, [props.viewDate, props.viewType, selectedRoomForWeek, rooms]);
+
+    // --- DRAG TO SELECT LOGIC: HANDLERS ---
+    useEffect(() => {
+        const handleGlobalMouseUp = () => {
+            if (dragState.isDragging) {
+                openDragBooking();
+            }
+        };
+        window.addEventListener('mouseup', handleGlobalMouseUp);
+        return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+    }, [dragState]);
+
+    const handleMouseDown = (colKey, item, idx) => {
+        setDragState({
+            isDragging: true,
+            colKey,
+            startIdx: idx,
+            currentIdx: idx,
+            item
+        });
+    };
+
+    const handleMouseEnter = (colKey, idx) => {
+        if (dragState.isDragging && dragState.colKey === colKey) {
+            setDragState(prev => ({ ...prev, currentIdx: idx }));
+        }
+    };
+
+    const openDragBooking = () => {
+        if (!dragState.isDragging || dragState.startIdx === -1) return;
+        
+        const minIdx = Math.min(dragState.startIdx, dragState.currentIdx);
+        const maxIdx = Math.max(dragState.startIdx, dragState.currentIdx);
+        
+        const startTime = props.timePeriods[minIdx].substring(0, 5);
+        
+        // Calculate End Time (Uses the start of the *next* block, or adds 1 hr if it's the last block)
+        let endTime = "";
+        if (maxIdx + 1 < props.timePeriods.length) {
+            endTime = props.timePeriods[maxIdx + 1].substring(0, 5);
+        } else {
+            const [h, m] = props.timePeriods[maxIdx].substring(0, 5).split(':').map(Number);
+            endTime = `${String((h + 1) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
+        const isDay = props.viewType === 'day';
+        const currentRoomID = isDay ? dragState.item.RoomID : selectedRoomForWeek;
+        const exactColumnDate = isDay ? props.viewDate : dragState.item;
+
+        setPopupConfig({
+            isOpen: true,
+            type: 'success',
+            title: 'Make a booking',
+            message: `Booking for ${exactColumnDate}`,
+            roomID: currentRoomID,
+            bookingDate: exactColumnDate,
+            timeDuration: `${startTime} - ${endTime}`
+        });
+
+        // Reset drag state
+        setDragState({ isDragging: false, colKey: null, startIdx: -1, currentIdx: -1, item: null });
+    };
 
     const filteredRooms = rooms.filter(room =>
         room.RoomName.toLowerCase().includes(props.roomFilter.toLowerCase())
@@ -98,19 +175,14 @@ function Menu(props) {
     });
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col items-center">
+        <div className="min-h-screen bg-gray-50 flex flex-col items-center select-none">
             <div className="w-full max-w-5xl px-4 pt-6 flex flex-col gap-4">
                 <div className="relative overflow-hidden bg-white/40 backdrop-blur-md rounded-2xl p-5 border border-white/60 shadow-sm">
                     <div className="relative flex items-center justify-between">
                         <div className="flex flex-col gap-0.5">
-                            <div className="flex items-center gap-2">
-                                <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"></span>
-                                <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-[0.3em]">Live</span>
-                            </div>
-                            <h1 className="text-xl font-light text-slate-800 tracking-tight">Booking <span className="font-semibold text-blue-600">Overview</span></h1>
+                            <h1 className="text-xl font-light text-slate-800 tracking-tight">Booking Page <span className="font-semibold text-blue-600"></span></h1>
                         </div>
                         <div className="hidden sm:flex flex-col items-end">
-                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Today's Date:</span>
                             <span className="text-xl font-semibold text-slate-600">
                                 {new Date(props.viewDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}
                             </span>
@@ -126,7 +198,7 @@ function Menu(props) {
                             value={props.roomFilter}
                             onChange={(e) => props.setRoomFilter(e.target.value)}
                             className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-blue-500/20"
-                            placeholder="Filter Rooms..."
+                            placeholder="Find Room"
                         />
                     </div>
                     <div className="relative group">
@@ -193,8 +265,9 @@ function Menu(props) {
                         {(props.viewType === 'day' ? filteredRooms : weekDays).map((item, colIdx) => {
                             const isDay = props.viewType === 'day';
                             const currentRoomID = isDay ? item.RoomID : selectedRoomForWeek;
-                            
                             const exactColumnDate = isDay ? props.viewDate : item;
+                            
+                            const columnKey = `${currentRoomID}-${exactColumnDate}`;
 
                             return (
                                 <div key={colIdx} className="w-64 border-r border-gray-200 last:border-r-0 flex-shrink-0">
@@ -209,10 +282,29 @@ function Menu(props) {
                                         const formattedRange = range.substring(0, 5);
                                         const currentBooking = bookingMap[`${String(currentRoomID)}-${exactColumnDate}-${String(formattedRange)}`];
 
+                                        const isSelected = dragState.isDragging && 
+                                            dragState.colKey === columnKey && 
+                                            idx >= Math.min(dragState.startIdx, dragState.currentIdx) && 
+                                            idx <= Math.max(dragState.startIdx, dragState.currentIdx);
+
                                         return (
-                                            <div key={idx} className="h-20 border-b border-gray-50 p-2 flex items-center justify-center">
+                                            <div 
+                                                key={idx} 
+                                                className={`h-20 border-b border-gray-50 p-2 flex items-center justify-center transition-colors ${
+                                                    isSelected ? 'bg-blue-100/70 border-blue-400/50' : 'hover:bg-gray-50 cursor-pointer'
+                                                }`}
+                                                onMouseDown={(e) => {
+                                                    if (!currentBooking) {
+                                                        e.preventDefault(); 
+                                                        handleMouseDown(columnKey, item, idx);
+                                                    }
+                                                }}
+                                                onMouseEnter={() => {
+                                                    if (!currentBooking) handleMouseEnter(columnKey, idx);
+                                                }}
+                                            >
                                                 {currentBooking ? (
-                                                    <div className="w-full h-full bg-slate-800 rounded-lg p-2.5 text-white shadow-sm flex flex-col justify-center border-l-4 border-blue-500 overflow-hidden">
+                                                    <div className="w-full h-full bg-slate-800 rounded-lg p-2.5 text-white shadow-sm flex flex-col justify-center border-l-4 border-blue-500 overflow-hidden cursor-default">
                                                         <div className="flex items-center gap-1.5 mb-0.5">
                                                             <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
                                                             <span className="text-[10px] font-bold uppercase truncate">{currentBooking.Title}</span>
@@ -222,20 +314,11 @@ function Menu(props) {
                                                         </span>
                                                     </div>
                                                 ) : (
-                                                    <button
-                                                        onClick={() => setPopupConfig({
-                                                            isOpen: true,
-                                                            type: 'success',
-                                                            title: 'Make a booking',
-                                                            message: `Booking for ${exactColumnDate}`,
-                                                            roomID: currentRoomID,
-                                                            bookingDate: exactColumnDate, 
-                                                            timeDuration: `${range}`
-                                                        })}
-                                                        className="text-[10px] font-bold text-emerald-500 tracking-tight hover:scale-105 transition-transform"
-                                                    >
-                                                        + Available
-                                                    </button>
+                                                    <span className={`text-[10px] font-bold tracking-tight hover:scale-105 transition-transform ${
+                                                        isSelected ? 'text-blue-600' : 'text-emerald-500'
+                                                    }`}>
+                                                        {isSelected ? 'Release to Book' : '+ Available'}
+                                                    </span>
                                                 )}
                                             </div>
                                         );
@@ -247,6 +330,7 @@ function Menu(props) {
                 )}
             </div>
 
+            {/* --- UPDATED POPUP TO CATCH ERRORS --- */}
             <PopUp
                 isOpen={popupConfig.isOpen}
                 type={popupConfig.type}
@@ -255,11 +339,17 @@ function Menu(props) {
                 roomID={popupConfig.roomID}
                 timeDuration={popupConfig.timeDuration}
                 bookingDate={popupConfig.bookingDate} 
-                onClose={async () => {
+                onClose={async (returnedError) => {
+                    // 1. Close the booking popup
                     setPopupConfig(prev => ({ ...prev, isOpen: false }));
-                    setTimeout(async () => {
-                        await loadData();
-                    }, 200);
+                    
+                    // 2. Execute a silent refresh immediately
+                    await loadData(false);
+
+                    // 3. Display any error message passed back from the booking popup
+                    if (returnedError && typeof returnedError === 'string') {
+                        handleErrorMessage(returnedError);
+                    }
                 }}
             />
             <ErrorPopUp
@@ -274,7 +364,7 @@ function Menu(props) {
 // --- MAIN SCREEN COMPONENT ---
 function MainScreen() {
     const [isLoading, setIsLoading] = useState(true);
-    const [isAccessDenied, setIsAccessDenied] = useState(false); // <-- New state for the strict security block
+    const [isAccessDenied, setIsAccessDenied] = useState(false);
     const [roomFilter, setRoomFilter] = useState('');
     const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]);
     const [viewType, setViewType] = useState('day');
@@ -290,7 +380,6 @@ function MainScreen() {
     useEffect(() => {
         async function loadInitialData() {
             try {
-                // 1. Get the currently logged-in Auth user securely via Supabase
                 const { data: { user }, error: authError } = await supabase.auth.getUser();
                 
                 if (authError || !user) {
@@ -298,19 +387,15 @@ function MainScreen() {
                     return;
                 }
 
-                // 2. Call the secure backend RPC instead of frontend SQL
                 const { data, error: profileError } = await supabase.rpc('get_my_profile');
-                
-                // RPCs return an array. Grab the first item if it exists.
                 const profile = data && data.length > 0 ? data[0] : null;
 
-                // 3. THE BLOCK: If they bypassed registration, deny access completely
                 if (profileError || !profile || !profile.Firstname) {
                     console.warn("User bypassed signup. Denying access.");
                     setErrorMessage("You do not have access. Your account isn't set up correctly. Please use your official invite link.");
                     setShowError(true);
-                    setIsAccessDenied(true); // Lock the screen to render the block UI
-                    setIsLoading(false); // Clear the loading state so the error popup shows
+                    setIsAccessDenied(true); 
+                    setIsLoading(false); 
                     return; 
                 }
 
@@ -353,7 +438,6 @@ function MainScreen() {
         setActivePage(target);
     };
 
-    // --- Loading UI Intercept ---
     if (isLoading) {
         return (
             <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
@@ -365,7 +449,6 @@ function MainScreen() {
         );
     }
 
-    // --- Access Denied UI Intercept ---
     if (isAccessDenied) {
         return (
             <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
@@ -374,14 +457,13 @@ function MainScreen() {
                     isOpen={showError}
                     onClose={() => {
                         setShowError(false);
-                        handleLogout(); // Instantly logs them out and redirects when they close the error
+                        handleLogout(); 
                     }}
                 />
             </div>
         );
     }
 
-    // Conditional Page Rendering
     if (activePage === 'admin' && userRole === 'ADMIN' && userConfirmed) {
         return <AdminPage onGoBack={() => setActivePage('menu')} />;
     }
@@ -390,7 +472,6 @@ function MainScreen() {
         return <ProfilePage onGoBack={() => setActivePage('menu')} />;
     }
 
-    // Default view is the Menu + Error Listener
     return (
         <>
             <Menu

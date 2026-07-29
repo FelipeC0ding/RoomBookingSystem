@@ -52,10 +52,6 @@ function ManageRooms({ onGoBack }) {
                         Back to Admin
                     </button>
                     
-                    <div className="flex items-center gap-2 text-slate-400 text-sm font-bold uppercase tracking-widest">
-                        <LayoutGrid size={16} />
-                        <span>Room Controller v1.0</span>
-                    </div>
                 </div>
 
                 <div className="bg-white p-4 rounded-2xl shadow-md border border-slate-200 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -88,7 +84,7 @@ function ManageRooms({ onGoBack }) {
                                     <th className="px-8 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter">Room Name</th>
                                     <th className="px-8 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter">Capacity</th>
                                     <th className="px-8 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter">Features</th>
-                                    <th className="px-8 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter text-right">Management</th>
+                                    <th className="px-8 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter text-right">Edit</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -125,7 +121,7 @@ function ManageRooms({ onGoBack }) {
                                                         }}
                                                 >
                                                     <Edit2 size={14} />
-                                                    Manage Room
+                                                    Edit Room
                                                 </button>
                                                 
                                             </div>
