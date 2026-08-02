@@ -374,6 +374,31 @@ export default class FetchDAL {
         }
     }
 
+    static async getAllBookings() {
+        try {
+            const { data, error } = await supabase.rpc('get_organisation_bookings_report');
+
+            if (error) {
+                console.error("Supabase RPC error fetching organization reports:", error.message);
+                return [];
+            }
+
+            return data.map(b => ({
+                BookingID: b.BookingID,
+                Title: b.Title,
+                BookingDate: b.BookingDate,
+                BookingStartTime: b.BookingStartTime,
+                BookingEndTime: b.BookingEndTime,
+                Room: { RoomName: b.RoomName },
+                User: { Firstname: b.Firstname, Surname: b.Surname }
+            }));
+            
+        } catch (error) {
+            console.error("Unexpected error in getting bookings:", error);
+            return [];
+        }
+    }
+
     static async fetchBookingsWeek(roomID, startDate, endDate) {
         try {
             const { data, error } = await supabase.rpc('get_org_bookings_by_room', {

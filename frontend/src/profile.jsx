@@ -6,17 +6,14 @@ import {
 import fetchData from './DAL/FetchData';
 import PopUp from './PopUps/editBooking';
 
-// --- Helpers ---
 const toKey = (dateLike) => {
     const d = new Date(dateLike);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
 const isSameDay = (a, b) => toKey(a) === toKey(b);
-
 const MONTH_LABEL = (d) => d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
-// --- Sub-component: a single booking chip inside a day cell ---
 const BookingChip = ({ booking, isPast, onClick }) => (
     <button
         onClick={(e) => { e.stopPropagation(); onClick(booking); }}
@@ -31,7 +28,6 @@ const BookingChip = ({ booking, isPast, onClick }) => (
     </button>
 );
 
-// --- Sub-component: the day-detail panel below the grid ---
 const DayDetailPanel = ({ date, bookings, todayKey, onEdit, onClose }) => {
     if (!date) return null;
     const isPast = toKey(date) < todayKey;
@@ -89,7 +85,6 @@ const DayDetailPanel = ({ date, bookings, todayKey, onEdit, onClose }) => {
     );
 };
 
-// --- Sub-component: month calendar grid ---
 const CalendarView = ({ bookings, onEdit }) => {
     const [monthCursor, setMonthCursor] = useState(() => {
         const d = new Date();
@@ -110,7 +105,6 @@ const CalendarView = ({ bookings, onEdit }) => {
         return map;
     }, [bookings]);
 
-    // Build a 6-week grid starting on Sunday
     const gridDays = useMemo(() => {
         const firstOfMonth = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
         const startOffset = firstOfMonth.getDay(); // 0 = Sunday
@@ -256,18 +250,6 @@ function ProfilePage({ onGoBack }) {
     const [user, setUser] = useState(null);
     const [department, setDepartment] = useState(null);
 
-    useEffect(() => {
-        const getUser = async () => {
-            const userData = await fetchData.getUserData();
-            let dept = await fetchData.getCurrentUser();
-            dept = dept.DepartmentID;
-            dept = await fetchData.GetDepartmentName(parseInt(dept));
-            setUser(userData);
-            setDepartment(dept);
-        }
-        getUser();
-    }, []);
-
     const loadData = async () => {
         let user = await fetchData.getUserData();
         const data = await fetchData.fetchUserBookings(user.id);
@@ -275,16 +257,27 @@ function ProfilePage({ onGoBack }) {
     };
 
     useEffect(() => {
-        const getBookings = async () => {
+        const initializeProfile = async () => {
+            setLoading(true); 
             try {
-                await loadData();
+                const userData = await fetchData.getUserData();
+                setUser(userData);
+
+                const deptUser = await fetchData.getCurrentUser();
+                const deptName = await fetchData.GetDepartmentName(parseInt(deptUser.DepartmentID));
+                setDepartment(deptName);
+
+                const bookingsData = await fetchData.fetchUserBookings(userData.id);
+                setBookings(bookingsData || []);
+                
             } catch (error) {
                 console.error("Error loading profile:", error);
             } finally {
-                setLoading(false);
+                setLoading(false); 
             }
-        }
-        getBookings();
+        };
+
+        initializeProfile();
     }, []);
 
     const [popupConfig, setPopupConfig] = useState({
@@ -356,7 +349,7 @@ function ProfilePage({ onGoBack }) {
                                     <div className="flex flex-col gap-1">
                                         <span className="text-blue-600 font-bold text-xs uppercase tracking-[0.2em] mb-1">Profile</span>
                                         <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-2">
-                                            {user?.user_metadata?.Firstname || 'User'}
+                                            {user?.user_metadata?.Firstname || ''}
                                         </h1>
 
                                         <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">

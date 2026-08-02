@@ -4,11 +4,11 @@ import {
     Users, 
     ArrowLeft, 
     ArrowRight, 
-    ShieldCheck, 
-    Activity 
+    BarChart3 // Added icon for the reports tab
 } from 'lucide-react';
 import ManageUsers from './ManageUsers';
 import ManageRooms from './ManageRooms';
+import ReportsPanel from './ReportsPanel'; // Imported the new component
 
 const NavCard = ({ icon: Icon, title, description, badgeText, badgeColor, iconColor, onClick }) => (
     <button
@@ -48,6 +48,9 @@ function AdminPage({ onGoBack }) {
     // Routing Logic
     if (view === 'rooms') return <ManageRooms onGoBack={() => setView('menu')} />;
     if (view === 'users') return <ManageUsers onGoBack={() => setView('menu')} />;
+    
+    // NEW: Reports routing logic (Make sure you add a back button to your ReportsPanel matching the others!)
+    if (view === 'reports') return <ReportsPanel onGoBack={() => setView('menu')} />;
 
     return (
         <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans">            
@@ -71,17 +74,15 @@ function AdminPage({ onGoBack }) {
                             Admin Page
                         </h1>
                         <p className="text-slate-500 text-sm md:text-base max-w-xl leading-relaxed">
-                            Manage Rooms and Users
+                            Manage Rooms, Users, and Analytics
                         </p>
                     </div>
-
- 
                 </header>
 
                 <hr className="border-slate-200 mb-10" />
 
-                {/* Module Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Module Grid - Updated to md:grid-cols-3 to fit the new card */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <NavCard 
                         icon={Users}
                         title="Manage Users"
@@ -98,6 +99,16 @@ function AdminPage({ onGoBack }) {
                         iconColor="text-emerald-600"
                         badgeColor="bg-emerald-50 text-emerald-700"
                         onClick={() => setView('rooms')}
+                    />
+
+                    {/* NEW REPORTS CARD */}
+                    <NavCard 
+                        icon={BarChart3}
+                        title="Reports & Analytics"
+                        description="View booking trends and export data"
+                        iconColor="text-purple-600"
+                        badgeColor="bg-purple-50 text-purple-700"
+                        onClick={() => setView('reports')}
                     />
                 </div>
 

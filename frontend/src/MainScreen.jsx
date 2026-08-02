@@ -8,8 +8,8 @@ import PopUp from './PopUps/BookRoom.jsx';
 import ErrorPopUp from './PopUps/ErrorPopUp.jsx';
 import ProfilePage from './profile.jsx'
 import { supabase } from './supabaseClient'
+import { getUserColour } from './colourUtils';
 
-// --- MENU COMPONENT ---
 function Menu(props) {
     const [rooms, setRooms] = useState([]);
     const [selectedRoomForWeek, setSelectedRoomForWeek] = useState(null);
@@ -18,7 +18,6 @@ function Menu(props) {
     const [showError, setShowError] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
 
-    // --- DRAG TO SELECT LOGIC: STATE ---
     const [dragState, setDragState] = useState({
         isDragging: false,
         colKey: null,
@@ -64,7 +63,6 @@ function Menu(props) {
         setShowError(true);
     };
 
-    // --- SILENT REFRESH SUPPORT ADDED HERE ---
     const loadData = async (showLoadingScreen = true) => {
         if (showLoadingScreen) {
             setIsLoading(true);
@@ -97,11 +95,10 @@ function Menu(props) {
 
     useEffect(() => {
         if (rooms.length > 0) {
-            loadData(true); // Show loading screen when navigating dates/rooms
+            loadData(true);
         }
     }, [props.viewDate, props.viewType, selectedRoomForWeek, rooms]);
 
-    // --- DRAG TO SELECT LOGIC: HANDLERS ---
     useEffect(() => {
         const handleGlobalMouseUp = () => {
             if (dragState.isDragging) {
@@ -136,7 +133,6 @@ function Menu(props) {
         
         const startTime = props.timePeriods[minIdx].substring(0, 5);
         
-        // Calculate End Time (Uses the start of the *next* block, or adds 1 hr if it's the last block)
         let endTime = "";
         if (maxIdx + 1 < props.timePeriods.length) {
             endTime = props.timePeriods[maxIdx + 1].substring(0, 5);
@@ -159,7 +155,6 @@ function Menu(props) {
             timeDuration: `${startTime} - ${endTime}`
         });
 
-        // Reset drag state
         setDragState({ isDragging: false, colKey: null, startIdx: -1, currentIdx: -1, item: null });
     };
 
@@ -168,10 +163,32 @@ function Menu(props) {
     );
 
     const bookingMap = {};
+
     (bookings || []).forEach(b => {
         const dbDate = new Date(b.BookingDate).toISOString().split('T')[0];
-        const key = `${String(b.RoomID)}-${dbDate}-${String(b.BookingStartTime.substring(0, 5))}`;
-        bookingMap[key] = b;
+        
+        const startStr = b.BookingStartTime ? b.BookingStartTime.substring(0, 5) : null;
+        const endStr = b.BookingEndTime ? b.BookingEndTime.substring(0, 5) : null;
+
+        if (startStr && endStr) {
+            let isInsideBooking = false;
+            
+            props.timePeriods.forEach((period) => {
+                const currentPeriod = period.substring(0, 5);
+                
+                if (currentPeriod === startStr) isInsideBooking = true;
+                
+                if (currentPeriod === endStr) isInsideBooking = false;
+
+                if (isInsideBooking) {
+                    const key = `${String(b.RoomID)}-${dbDate}-${currentPeriod}`;
+                    bookingMap[key] = b;
+                }
+            });
+        } else if (startStr) {
+            const key = `${String(b.RoomID)}-${dbDate}-${startStr}`;
+            bookingMap[key] = b;
+        }
     });
 
     return (
@@ -286,6 +303,9 @@ function Menu(props) {
                                             dragState.colKey === columnKey && 
                                             idx >= Math.min(dragState.startIdx, dragState.currentIdx) && 
                                             idx <= Math.max(dragState.startIdx, dragState.currentIdx);
+                                            
+                                        // Generate the specific color class for this booking if it exists
+                                        const userColorClass = currentBooking ? getUserColour(currentBooking.UserID) : '';
 
                                         return (
                                             <div 
@@ -304,13 +324,13 @@ function Menu(props) {
                                                 }}
                                             >
                                                 {currentBooking ? (
-                                                    <div className="w-full h-full bg-slate-800 rounded-lg p-2.5 text-white shadow-sm flex flex-col justify-center border-l-4 border-blue-500 overflow-hidden cursor-default">
+                                                    <div className={`w-full h-full rounded-lg p-2.5 shadow-sm flex flex-col justify-center overflow-hidden cursor-default ${userColorClass}`}>
                                                         <div className="flex items-center gap-1.5 mb-0.5">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
                                                             <span className="text-[10px] font-bold uppercase truncate">{currentBooking.Title}</span>
                                                         </div>
-                                                        <span className="text-[14px] opacity-60 font-medium truncate ml-3">
-                                                            {currentBooking.User.Firstname} {currentBooking.User.Surname}
+                                                        <span className="text-[14px] opacity-80 font-medium truncate ml-3">
+                                                            {currentBooking.User?.Firstname} {currentBooking.User?.Surname}
                                                         </span>
                                                     </div>
                                                 ) : (
@@ -330,7 +350,6 @@ function Menu(props) {
                 )}
             </div>
 
-            {/* --- UPDATED POPUP TO CATCH ERRORS --- */}
             <PopUp
                 isOpen={popupConfig.isOpen}
                 type={popupConfig.type}
@@ -340,13 +359,8 @@ function Menu(props) {
                 timeDuration={popupConfig.timeDuration}
                 bookingDate={popupConfig.bookingDate} 
                 onClose={async (returnedError) => {
-                    // 1. Close the booking popup
                     setPopupConfig(prev => ({ ...prev, isOpen: false }));
-                    
-                    // 2. Execute a silent refresh immediately
                     await loadData(false);
-
-                    // 3. Display any error message passed back from the booking popup
                     if (returnedError && typeof returnedError === 'string') {
                         handleErrorMessage(returnedError);
                     }
@@ -361,7 +375,6 @@ function Menu(props) {
     );
 }
 
-// --- MAIN SCREEN COMPONENT ---
 function MainScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [isAccessDenied, setIsAccessDenied] = useState(false);

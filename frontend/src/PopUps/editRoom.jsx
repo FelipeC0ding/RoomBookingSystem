@@ -72,7 +72,7 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
 
                         <div className="space-y-2">
                             <label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                                <Users size={14} /> Seating Capacity
+                                <Users size={14} /> Room Capacity
                             </label>
                             <input
                                 type="number"
@@ -96,7 +96,7 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
                         <div className="flex gap-3 rounded-2xl bg-amber-50 p-4 border border-amber-100">
                             <Info className="text-amber-500 shrink-0" size={20} />
                             <p className="text-xs text-amber-700 leading-relaxed font-medium">
-                                Changes will be saved to the database and updated immediately.
+                                Changes will be saved to the updated immediately.
                             </p>
                         </div>
                     </div>
