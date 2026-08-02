@@ -13,7 +13,7 @@ import ReportsPanel from './ReportsPanel';
 const NavCard = ({ icon: Icon, title, description, badgeText, badgeColor, iconColor, onClick }) => (
     <button
         onClick={onClick}
-        className="group text-left flex flex-col justify-between p-7 bg-white rounded-2xl border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-lg transition-all duration-300 w-full"
+        className="group text-left flex flex-col justify-between p-6 md:p-7 bg-white rounded-2xl border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-lg transition-all duration-300 w-full box-border"
     >
         <div className="w-full">
             <div className="flex items-start justify-between mb-6 w-full">
@@ -30,7 +30,7 @@ const NavCard = ({ icon: Icon, title, description, badgeText, badgeColor, iconCo
             <h3 className="text-lg font-bold text-slate-900 mb-2 tracking-tight group-hover:text-blue-600 transition-colors truncate">
                 {title}
             </h3>
-            <p className="text-sm text-slate-500 leading-relaxed max-w-[90%]">
+            <p className="text-sm text-slate-500 leading-relaxed max-w-full overflow-hidden text-ellipsis">
                 {description}
             </p>
         </div>
@@ -45,20 +45,20 @@ const NavCard = ({ icon: Icon, title, description, badgeText, badgeColor, iconCo
 function AdminPage({ onGoBack }) {
     const [view, setView] = useState('menu');
 
-    // Routing Logic
     if (view === 'rooms') return <ManageRooms onGoBack={() => setView('menu')} />;
     if (view === 'users') return <ManageUsers onGoBack={() => setView('menu')} />;
     if (view === 'reports') return <ReportsPanel onGoBack={() => setView('menu')} />;
 
     return (
-        /* MODIFIED: Added w-full max-w-[100vw] overflow-x-hidden */
-        <div className="min-h-screen bg-slate-50 p-4 md:p-6 lg:p-10 font-sans w-full max-w-[100vw] overflow-x-hidden">            
-            <div className="max-w-5xl mx-auto w-full">
+        <div 
+            className="min-h-screen bg-slate-50 p-4 md:p-6 lg:p-10 font-sans box-border flex flex-col items-center" 
+            style={{ maxWidth: '100vw', overflowX: 'hidden' }}
+        >            
+            <div className="w-full max-w-5xl box-border">
                 
-                {/* Top Navigation */}
                 <button
                     onClick={onGoBack}
-                    className="group flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors mb-8 md:mb-12"
+                    className="group flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors mb-8 md:mb-12 w-fit"
                 >
                     <div className="p-1.5 rounded-lg bg-white border border-slate-200 group-hover:border-slate-300 shadow-sm shrink-0">
                         <ArrowLeft size={16} />
@@ -66,13 +66,12 @@ function AdminPage({ onGoBack }) {
                     Return to Dashboard
                 </button>
 
-                {/* Dashboard Header */}
                 <header className="mb-8 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 w-full">
-                    <div className="w-full">
+                    <div className="w-full overflow-hidden">
                         <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 mb-3 truncate">
                             Admin Page
                         </h1>
-                        <p className="text-slate-500 text-sm md:text-base max-w-xl leading-relaxed">
+                        <p className="text-slate-500 text-sm md:text-base max-w-xl leading-relaxed truncate">
                             Manage Rooms, Users, and Analytics
                         </p>
                     </div>
@@ -80,8 +79,7 @@ function AdminPage({ onGoBack }) {
 
                 <hr className="border-slate-200 mb-8 md:mb-10 w-full" />
 
-                {/* Module Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 w-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 w-full box-border">
                     <NavCard 
                         icon={Users}
                         title="Manage Users"
