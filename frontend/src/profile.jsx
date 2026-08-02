@@ -107,7 +107,7 @@ const CalendarView = ({ bookings, onEdit }) => {
 
     const gridDays = useMemo(() => {
         const firstOfMonth = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
-        const startOffset = firstOfMonth.getDay(); // 0 = Sunday
+        const startOffset = firstOfMonth.getDay(); 
         const gridStart = new Date(firstOfMonth);
         gridStart.setDate(firstOfMonth.getDate() - startOffset);
 
@@ -172,63 +172,67 @@ const CalendarView = ({ bookings, onEdit }) => {
                 </span>
             </div>
 
-            {/* Grid */}
-            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-                <div className="grid grid-cols-7 border-b border-slate-100">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-                        <div key={d} className="py-3 text-center text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                            {d}
+            {/* MODIFIED: Horizontal Scroll Constraint on Grid */}
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden w-full">
+                <div className="w-full max-w-full overflow-x-auto">
+                    <div className="min-w-[600px]"> {/* Forces horizontal scroll on mobile instead of zoom-out */}
+                        <div className="grid grid-cols-7 border-b border-slate-100">
+                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+                                <div key={d} className="py-3 text-center text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                    {d}
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
 
-                <div className="grid grid-cols-7">
-                    {gridDays.map((day, idx) => {
-                        const key = toKey(day);
-                        const inMonth = day.getMonth() === monthCursor.getMonth();
-                        const isToday = key === todayKey;
-                        const isPast = key < todayKey;
-                        const dayBookings = bookingsByDay.get(key) || [];
-                        const isSelected = selectedDate && isSameDay(day, selectedDate);
+                        <div className="grid grid-cols-7">
+                            {gridDays.map((day, idx) => {
+                                const key = toKey(day);
+                                const inMonth = day.getMonth() === monthCursor.getMonth();
+                                const isToday = key === todayKey;
+                                const isPast = key < todayKey;
+                                const dayBookings = bookingsByDay.get(key) || [];
+                                const isSelected = selectedDate && isSameDay(day, selectedDate);
 
-                        return (
-                            <div
-                                key={idx}
-                                onClick={() => setSelectedDate(day)}
-                                className={`min-h-[6.5rem] p-2 border-b border-r border-slate-100 last:border-r-0 cursor-pointer transition-colors ${
-                                    inMonth ? 'bg-white hover:bg-slate-50' : 'bg-slate-50/60'
-                                } ${isSelected ? 'ring-2 ring-inset ring-blue-500' : ''}`}
-                            >
-                                <div className="flex items-center justify-between mb-1.5">
-                                    <span
-                                        className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${
-                                            isToday
-                                                ? 'bg-blue-600 text-white'
-                                                : inMonth
-                                                ? 'text-slate-700'
-                                                : 'text-slate-300'
-                                        }`}
+                                return (
+                                    <div
+                                        key={idx}
+                                        onClick={() => setSelectedDate(day)}
+                                        className={`min-h-[6.5rem] p-2 border-b border-r border-slate-100 last:border-r-0 cursor-pointer transition-colors ${
+                                            inMonth ? 'bg-white hover:bg-slate-50' : 'bg-slate-50/60'
+                                        } ${isSelected ? 'ring-2 ring-inset ring-blue-500' : ''}`}
                                     >
-                                        {day.getDate()}
-                                    </span>
-                                    {dayBookings.length > 3 && (
-                                        <span className="text-[10px] font-bold text-slate-400">+{dayBookings.length - 3}</span>
-                                    )}
-                                </div>
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <span
+                                                className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${
+                                                    isToday
+                                                        ? 'bg-blue-600 text-white'
+                                                        : inMonth
+                                                        ? 'text-slate-700'
+                                                        : 'text-slate-300'
+                                                }`}
+                                            >
+                                                {day.getDate()}
+                                            </span>
+                                            {dayBookings.length > 3 && (
+                                                <span className="text-[10px] font-bold text-slate-400">+{dayBookings.length - 3}</span>
+                                            )}
+                                        </div>
 
-                                <div className="space-y-1">
-                                    {dayBookings.slice(0, 3).map((b) => (
-                                        <BookingChip
-                                            key={b.BookingID}
-                                            booking={b}
-                                            isPast={isPast}
-                                            onClick={() => setSelectedDate(day)}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        );
-                    })}
+                                        <div className="space-y-1">
+                                            {dayBookings.slice(0, 3).map((b) => (
+                                                <BookingChip
+                                                    key={b.BookingID}
+                                                    booking={b}
+                                                    isPast={isPast}
+                                                    onClick={() => setSelectedDate(day)}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -310,8 +314,9 @@ function ProfilePage({ onGoBack }) {
     }, [bookings]);
 
     return (
-        <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-            <div className="max-w-4xl mx-auto">
+        /* MODIFIED: Added global w-full max-w-[100vw] overflow-x-hidden safety net */
+        <div className="min-h-screen bg-slate-50 p-4 md:p-8 w-full max-w-[100vw] overflow-x-hidden">
+            <div className="max-w-4xl mx-auto w-full">
 
                 {/* Navigation Header */}
                 <button
@@ -328,9 +333,9 @@ function ProfilePage({ onGoBack }) {
                     <div className="relative flex flex-col md:flex-row items-center gap-8">
                         {loading ? (
                             <>
-                                <div className="w-28 h-28 bg-slate-200 rounded-[2rem] animate-pulse" />
-                                <div className="text-center md:text-left flex-1 space-y-4">
-                                    <div className="space-y-2 flex flex-col items-center md:items-start">
+                                <div className="w-28 h-28 shrink-0 bg-slate-200 rounded-[2rem] animate-pulse" />
+                                <div className="text-center md:text-left flex-1 w-full space-y-4">
+                                    <div className="space-y-2 flex flex-col items-center md:items-start w-full">
                                         <div className="h-3 w-24 bg-slate-100 rounded animate-pulse" />
                                         <div className="h-10 w-48 bg-slate-200 rounded-xl animate-pulse" />
                                     </div>
@@ -338,30 +343,28 @@ function ProfilePage({ onGoBack }) {
                             </>
                         ) : (
                             <>
-                                <div className="relative group">
+                                <div className="relative group shrink-0">
                                     <div className="w-28 h-28 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] flex items-center justify-center text-white shadow-2xl shadow-blue-200 transform group-hover:scale-105 transition-transform duration-300">
                                         <UserIcon size={44} strokeWidth={1.5} />
                                     </div>
                                     <div className="absolute -bottom-2 -right-2 bg-emerald-500 w-6 h-6 rounded-full border-4 border-white shadow-sm" />
                                 </div>
 
-                                <div className="text-center md:text-left flex-1">
-                                    <div className="flex flex-col gap-1">
+                                <div className="text-center md:text-left flex-1 w-full">
+                                    <div className="flex flex-col gap-1 w-full">
                                         <span className="text-blue-600 font-bold text-xs uppercase tracking-[0.2em] mb-1">Profile</span>
-                                        <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-2">
+                                        <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-2 truncate max-w-full">
                                             {user?.user_metadata?.Firstname || ''}
                                         </h1>
 
-                                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 w-full">
                                             <span className="flex items-center gap-1.5 text-slate-400 text-sm font-medium">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                                                <span className="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0" />
                                                 Click a date to view and edit bookings
                                             </span>
                                         </div>
                                     </div>
                                 </div>
-
-                                
                             </>
                         )}
                     </div>
