@@ -86,14 +86,15 @@ function ReportsPanel({ onGoBack }) {
         if (!bookings.length) return;
 
         try {
-            const headers = ['Booking ID', 'Room', 'User', 'Title', 'Date', 'Start Time', 'End Time', 'Status'];
+            // REMOVED 'Booking ID' from headers
+            const headers = ['Room', 'User', 'Title', 'Date', 'Start Time', 'End Time', 'Status'];
             
             const rows = bookings.map(b => {
                 const roomName = b.Room?.RoomName || b.RoomName || '';
                 const userName = b.User ? `${b.User.Firstname || ''} ${b.User.Surname || ''}`.trim() : b.UserName || '';
                 
                 return [
-                    sanitizeCSV(b.BookingID),
+                    // REMOVED sanitizeCSV(b.BookingID)
                     sanitizeCSV(roomName),
                     sanitizeCSV(userName),
                     sanitizeCSV(b.Title),
@@ -126,127 +127,149 @@ function ReportsPanel({ onGoBack }) {
         }
     };
 
-    if (loading) {
-        return (
-            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-                <p className="text-sm font-medium">Analyzing booking data...</p>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 flex items-start gap-4 animate-in fade-in">
-                <AlertCircle className="text-red-600 mt-0.5 shrink-0" />
-                <div>
-                    <h3 className="text-red-800 font-bold">Data Load Failed</h3>
-                    <p className="text-red-600 text-sm mt-1">{error}</p>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="space-y-6 animate-in fade-in duration-300">
-            {/* Navigation Header */}
-            {onGoBack && (
-                <button
-                    onClick={onGoBack}
-                    className="group flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors mb-2"
-                >
-                    <div className="p-1.5 rounded-lg bg-white border border-slate-200 group-hover:border-slate-300 shadow-sm">
-                        <ArrowLeft size={16} />
-                    </div>
-                    Return to Admin Menu
-                </button>
-            )}
-
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <div>
-                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                        <BarChart3 className="text-blue-600" /> Booking Analytics
-                    </h2>
-                    <p className="text-sm text-slate-500 mt-1">Based on {bookings.length} total bookings across the organization.</p>
-                </div>
+        <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans">
+            <div className="max-w-5xl mx-auto animate-in fade-in duration-300">
                 
-                <button 
-                    onClick={handleExportCSV}
-                    disabled={bookings.length === 0}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    <Download size={16} /> Export CSV
-                </button>
-            </div>
+                {/* Top Navigation */}
+                {onGoBack && (
+                    <button
+                        onClick={onGoBack}
+                        className="group flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors mb-12"
+                    >
+                        <div className="p-1.5 rounded-lg bg-white border border-slate-200 group-hover:border-slate-300 shadow-sm">
+                            <ArrowLeft size={16} />
+                        </div>
+                        Return to Admin Menu
+                    </button>
+                )}
 
-            {bookings.length === 0 ? (
-                <div className="bg-white border border-slate-200 rounded-2xl py-20 flex flex-col items-center justify-center text-slate-400">
-                    <BarChart3 size={48} className="mb-4 opacity-20" />
-                    <p className="font-medium italic">No booking data available to analyze.</p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Top Rooms */}
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2">
-                            <DoorOpen size={16} className="text-indigo-500" /> Most Popular Rooms
-                        </h3>
-                        <div className="space-y-3">
-                            {trends.topRooms.map(([name, count], i) => (
-                                <div key={name} className="flex items-center justify-between">
-                                    <span className="text-sm font-semibold text-slate-700 flex items-center gap-2 truncate">
-                                        <span className="text-xs text-slate-400 shrink-0">#{i + 1}</span> 
-                                        <span className="truncate">{name}</span>
-                                    </span>
-                                    <span className="text-xs font-bold bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md shrink-0 ml-2">
-                                        {count}
-                                    </span>
-                                </div>
-                            ))}
+                {/* Dashboard Header matching Admin.jsx */}
+                <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div>
+                        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 mb-3">
+                            Reports & Analytics
+                        </h1>
+                        <p className="text-slate-500 text-sm md:text-base max-w-xl leading-relaxed">
+                            View booking trends and export data as CSV.
+                        </p>
+                    </div>
+                </header>
+
+                <hr className="border-slate-200 mb-10" />
+
+                {/* State Handling: Loading */}
+                {loading && (
+                    <div className="flex flex-col items-center justify-center py-20 text-slate-400 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+                        <p className="text-sm font-medium">Analyzing booking data...</p>
+                    </div>
+                )}
+
+                {/* State Handling: Error */}
+                {error && !loading && (
+                    <div className="bg-red-50 border border-red-200 rounded-2xl p-6 flex items-start gap-4 animate-in fade-in">
+                        <AlertCircle className="text-red-600 mt-0.5 shrink-0" />
+                        <div>
+                            <h3 className="text-red-800 font-bold">Data Load Failed</h3>
+                            <p className="text-red-600 text-sm mt-1">{error}</p>
                         </div>
                     </div>
+                )}
 
-                    {/* Top Users */}
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2">
-                            <Users size={16} className="text-emerald-500" /> Top Users
-                        </h3>
-                        <div className="space-y-3">
-                            {trends.topUsers.map(([name, count], i) => (
-                                <div key={name} className="flex items-center justify-between">
-                                    <span className="text-sm font-semibold text-slate-700 truncate">{name}</span>
-                                    <span className="text-xs font-bold bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md shrink-0 ml-2">
-                                        {count}
-                                    </span>
-                                </div>
-                            ))}
+                {/* Main Content Areas */}
+                {!loading && !error && (
+                    <div className="space-y-6">
+                        {/* Export Action Bar */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                            <div>
+                                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                    <BarChart3 className="text-blue-600" /> Booking Overview
+                                </h2>
+                                <p className="text-sm text-slate-500 mt-1">Based on {bookings.length} total bookings across the organisation.</p>
+                            </div>
+                            
+                            <button 
+                                onClick={handleExportCSV}
+                                disabled={bookings.length === 0}
+                                className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <Download size={16} /> Export CSV
+                            </button>
                         </div>
-                    </div>
 
-                    {/* Peak Times */}
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2">
-                            <Clock size={16} className="text-amber-500" /> Peak Usage Times
-                        </h3>
-                        <div className="space-y-3">
-                            {trends.peakTimes.map(([time, count]) => (
-                                <div key={time} className="flex items-center justify-between">
-                                    <span className="text-sm font-bold text-slate-700">{time}</span>
-                                    <div className="flex items-center gap-2 w-1/2 justify-end">
-                                        <div className="h-1.5 bg-amber-200 rounded-full w-full max-w-[4rem] overflow-hidden">
-                                            <div 
-                                                className="h-full bg-amber-500 rounded-full" 
-                                                style={{ width: `${(count / trends.peakTimes[0][1]) * 100}%` }}
-                                            />
-                                        </div>
-                                        <span className="text-xs font-bold text-amber-700 w-4 text-right">{count}</span>
+                        {/* Empty State vs Data Grid */}
+                        {bookings.length === 0 ? (
+                            <div className="bg-white border border-slate-200 rounded-2xl py-20 flex flex-col items-center justify-center text-slate-400 shadow-sm">
+                                <BarChart3 size={48} className="mb-4 opacity-20" />
+                                <p className="font-medium italic">No booking data available to analyze.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                {/* Top Rooms */}
+                                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                    <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2">
+                                        <DoorOpen size={16} className="text-indigo-500" /> Most Popular Rooms
+                                    </h3>
+                                    <div className="space-y-3">
+                                        {trends.topRooms.map(([name, count], i) => (
+                                            <div key={name} className="flex items-center justify-between">
+                                                <span className="text-sm font-semibold text-slate-700 flex items-center gap-2 truncate">
+                                                    <span className="text-xs text-slate-400 shrink-0">#{i + 1}</span> 
+                                                    <span className="truncate">{name}</span>
+                                                </span>
+                                                <span className="text-xs font-bold bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md shrink-0 ml-2">
+                                                    {count}
+                                                </span>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
-                            ))}
-                        </div>
+
+                                {/* Top Users */}
+                                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                    <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2">
+                                        <Users size={16} className="text-emerald-500" /> Top Users
+                                    </h3>
+                                    <div className="space-y-3">
+                                        {trends.topUsers.map(([name, count], i) => (
+                                            <div key={name} className="flex items-center justify-between">
+                                                <span className="text-sm font-semibold text-slate-700 truncate">{name}</span>
+                                                <span className="text-xs font-bold bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md shrink-0 ml-2">
+                                                    {count}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Peak Times */}
+                                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                    <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2">
+                                        <Clock size={16} className="text-amber-500" /> Peak Usage Times
+                                    </h3>
+                                    <div className="space-y-3">
+                                        {trends.peakTimes.map(([time, count]) => (
+                                            <div key={time} className="flex items-center justify-between">
+                                                <span className="text-sm font-bold text-slate-700">{time}</span>
+                                                <div className="flex items-center gap-2 w-1/2 justify-end">
+                                                    <div className="h-1.5 bg-amber-200 rounded-full w-full max-w-[4rem] overflow-hidden">
+                                                        <div 
+                                                            className="h-full bg-amber-500 rounded-full" 
+                                                            style={{ width: `${(count / trends.peakTimes[0][1]) * 100}%` }}
+                                                        />
+                                                    </div>
+                                                    <span className="text-xs font-bold text-amber-700 w-4 text-right">{count}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 }
