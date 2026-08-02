@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ArrowLeft, 
-  Plus, 
-  Search, 
-  Edit2, 
-  Trash2, 
-  Users, 
-  Filter,
-  LayoutGrid
+    ArrowLeft, 
+    Plus, 
+    Search, 
+    Edit2, 
+    Trash2, 
+    Users, 
+    Filter,
+    LayoutGrid
 } from 'lucide-react';
 import fetchData from './DAL/FetchData'
 import EditRoom from './PopUps/editRoom'
@@ -38,8 +38,8 @@ function ManageRooms({ onGoBack }) {
     });
 
     return (
-        <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-            <div className="max-w-6xl mx-auto">
+        <div className="min-h-screen bg-slate-50 p-4 md:p-8 w-full max-w-[100vw] overflow-x-hidden">
+            <div className="max-w-6xl mx-auto w-full">
                 
                 <div className="flex items-center justify-between mb-6">
                     <button 
@@ -51,10 +51,9 @@ function ManageRooms({ onGoBack }) {
                         </div>
                         Back to Admin
                     </button>
-                    
                 </div>
 
-                <div className="bg-white p-4 rounded-2xl shadow-md border border-slate-200 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div className="bg-white p-4 rounded-2xl shadow-md border border-slate-200 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between w-full">
                     <div className="relative w-full md:w-96">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                         <input 
@@ -75,34 +74,34 @@ function ManageRooms({ onGoBack }) {
                     </div>
                 </div>
 
-                {/* Table Section */}
-                <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
+                {/* MODIFIED: Forced constraint and horizontal scroll on the table */}
+                <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden w-full">
+                    <div className="w-full max-w-full overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[800px]">
                             <thead>
                                 <tr className="bg-slate-50 border-b border-slate-200">
-                                    <th className="px-8 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter">Room Name</th>
-                                    <th className="px-8 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter">Capacity</th>
-                                    <th className="px-8 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter">Features</th>
-                                    <th className="px-8 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter text-right">Edit</th>
+                                    <th className="px-6 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter">Room Name</th>
+                                    <th className="px-6 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter">Capacity</th>
+                                    <th className="px-6 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter">Features</th>
+                                    <th className="px-6 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter text-right">Edit</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {filteredRooms.map((room) => (
                                     <tr key={room.id} className="hover:bg-slate-50/50 transition-colors">
-                                        <td className="px-8 py-6">
-                                            <span className="block font-black text-slate-900 text-lg uppercase tracking-tight">{room.RoomName}</span>
+                                        <td className="px-6 py-6">
+                                            <span className="block font-black text-slate-900 text-base md:text-lg uppercase tracking-tight">{room.RoomName}</span>
                                         </td>
-                                        <td className="px-8 py-6">
+                                        <td className="px-6 py-6">
                                             <div className="flex items-center gap-2 text-slate-700">
                                                 <div className="p-2 bg-slate-100 rounded-lg">
-                                                    <Users size={18} />
+                                                    <Users size={16} />
                                                 </div>
-                                                <span className="font-bold text-lg">{room.Capacity}</span>
+                                                <span className="font-bold text-base">{room.Capacity}</span>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-6">
-                                            <div className="flex flex-wrap gap-2">
+                                        <td className="px-6 py-6">
+                                            <div className="flex flex-wrap gap-1.5">
                                                 {room.Features && (
                                                     <span className="border border-slate-200 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-white">
                                                         {room.Features}
@@ -110,20 +109,18 @@ function ManageRooms({ onGoBack }) {
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-8 py-6">
-                                            {/* Actions are now always visible */}
+                                        <td className="px-6 py-6">
                                             <div className="flex justify-end gap-3">
                                                 <button 
                                                     className="flex items-center gap-1 px-3 py-2 bg-slate-100 text-slate-600 rounded-lg font-bold text-xs hover:bg-blue-600 hover:text-white transition-all shadow-sm"
                                                     onClick={() =>
                                                         {setPopUpState(true);
                                                         setSelectedRoom(room);
-                                                        }}
+                                                    }}
                                                 >
                                                     <Edit2 size={14} />
-                                                    Edit Room
+                                                    Edit
                                                 </button>
-                                                
                                             </div>
                                         </td>
                                     </tr>

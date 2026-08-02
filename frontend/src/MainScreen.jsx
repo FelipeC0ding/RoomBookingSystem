@@ -177,7 +177,6 @@ function Menu(props) {
                 const currentPeriod = period.substring(0, 5);
                 
                 if (currentPeriod === startStr) isInsideBooking = true;
-                
                 if (currentPeriod === endStr) isInsideBooking = false;
 
                 if (isInsideBooking) {
@@ -192,39 +191,41 @@ function Menu(props) {
     });
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col items-center select-none">
+        <div className="min-h-screen bg-gray-50 flex flex-col items-center select-none w-full max-w-[100vw] overflow-x-hidden">
             <div className="w-full max-w-5xl px-4 pt-6 flex flex-col gap-4">
                 <div className="relative overflow-hidden bg-white/40 backdrop-blur-md rounded-2xl p-5 border border-white/60 shadow-sm">
                     <div className="relative flex items-center justify-between">
                         <div className="flex flex-col gap-0.5">
-                            <h1 className="text-xl font-light text-slate-800 tracking-tight">Booking Page <span className="font-semibold text-blue-600"></span></h1>
+                            <h1 className="text-xl font-light text-slate-800 tracking-tight">Booking Page</h1>
                         </div>
-                        <div className="hidden sm:flex flex-col items-end">
-                            <span className="text-xl font-semibold text-slate-600">
-                                {new Date(props.viewDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}
+                        <div className="flex flex-col items-end">
+                            <span className="text-lg md:text-xl font-semibold text-slate-600">
+                                {new Date(props.viewDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                             </span>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
-                    <div className="relative w-64 group">
+                {/* MODIFIED: Flex wrap added to prevent toolbar from expanding page width */}
+                <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex flex-wrap items-center gap-3 w-full">
+                    <div className="relative flex-1 min-w-[140px]">
                         <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
                             type="text"
                             value={props.roomFilter}
                             onChange={(e) => props.setRoomFilter(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-blue-500/20"
+                            className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-blue-500/20"
                             placeholder="Find Room"
                         />
                     </div>
-                    <div className="relative group">
+                    
+                    <div className="relative">
                         <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                         <input
                             type="date"
                             value={props.viewDate}
                             onChange={(e) => props.setViewDate(e.target.value)}
-                            className="bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+                            className="bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 w-[140px]"
                         />
                     </div>
 
@@ -241,18 +242,17 @@ function Menu(props) {
                         <select
                             value={selectedRoomForWeek || ""}
                             onChange={(e) => setSelectedRoomForWeek(parseInt(e.target.value))}
-                            className="bg-blue-50 border border-blue-100 text-blue-600 rounded-lg px-3 py-2 text-sm font-bold outline-none cursor-pointer"
+                            className="bg-blue-50 border border-blue-100 text-blue-600 rounded-lg px-3 py-2 text-sm font-bold outline-none cursor-pointer flex-1 min-w-[120px]"
                         >
                             {rooms.map(r => (
                                 <option key={r.RoomID} value={r.RoomID}>
-                                    Viewing: {r.RoomName}
+                                    {r.RoomName}
                                 </option>
                             ))}
                         </select>
                     )}
 
-                    <div className="flex-1" />
-                    <div className="flex gap-2">
+                    <div className="flex gap-1 ml-auto">
                         <button onClick={props.handleAdminClick} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"><Settings size={20} /></button>
                         <button onClick={props.handleProfilePageClick} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"><User size={20} /></button>
                         <button onClick={props.handleLogoutClick} className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-colors"><LogOut size={20} /></button>
@@ -260,20 +260,21 @@ function Menu(props) {
                 </div>
             </div>
 
-            <div className="w-full flex-1 overflow-auto p-6 flex justify-center">
+            {/* MODIFIED: Forced this wrapper to be strictly scrollable horizontally */}
+            <div className="w-full flex-1 overflow-x-auto p-4 md:p-6 flex justify-start md:justify-center">
                 {isLoading ? (
-                    <div className="flex flex-col items-center justify-center py-40">
+                    <div className="flex flex-col items-center justify-center py-40 mx-auto w-full">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
                         <p className="text-slate-500 font-medium animate-pulse">Fetching schedule...</p>
                     </div>
                 ) : (
-                    <div className="inline-flex bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden h-fit">
-                        <div className="w-24 bg-gray-50/50 border-r border-gray-200 flex-shrink-0">
+                    <div className="inline-flex bg-white rounded-xl shadow-xl border border-gray-200 h-fit min-w-max">
+                        <div className="w-20 md:w-24 bg-gray-50/50 border-r border-gray-200 flex-shrink-0 sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                             <div className="h-12 border-b border-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50">
                                 Time
                             </div>
                             {props.timePeriods.map((time, i) => (
-                                <div key={i} className="h-20 border-b border-gray-100 flex items-center justify-center text-[11px] font-bold text-gray-500">
+                                <div key={i} className="h-20 border-b border-gray-100 flex items-center justify-center text-[10px] md:text-[11px] font-bold text-gray-500 bg-gray-50/50">
                                     {time}
                                 </div>
                             ))}
@@ -287,8 +288,8 @@ function Menu(props) {
                             const columnKey = `${currentRoomID}-${exactColumnDate}`;
 
                             return (
-                                <div key={colIdx} className="w-64 border-r border-gray-200 last:border-r-0 flex-shrink-0">
-                                    <div className="h-12 border-b border-gray-200 bg-white flex flex-col items-center justify-center px-4">
+                                <div key={colIdx} className="w-48 md:w-64 border-r border-gray-200 last:border-r-0 flex-shrink-0">
+                                    <div className="h-12 border-b border-gray-200 bg-white flex flex-col items-center justify-center px-2 md:px-4">
                                         <span className="text-xs font-bold text-slate-800 uppercase tracking-tight truncate w-full text-center">
                                             {isDay ? item.RoomName : new Date(item).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}
                                         </span>
@@ -304,13 +305,12 @@ function Menu(props) {
                                             idx >= Math.min(dragState.startIdx, dragState.currentIdx) && 
                                             idx <= Math.max(dragState.startIdx, dragState.currentIdx);
                                             
-                                        // Generate the specific color class for this booking if it exists
                                         const userColorClass = currentBooking ? getUserColour(currentBooking.UserID) : '';
 
                                         return (
                                             <div 
                                                 key={idx} 
-                                                className={`h-20 border-b border-gray-50 p-2 flex items-center justify-center transition-colors ${
+                                                className={`h-20 border-b border-gray-50 p-1.5 md:p-2 flex items-center justify-center transition-colors ${
                                                     isSelected ? 'bg-blue-100/70 border-blue-400/50' : 'hover:bg-gray-50 cursor-pointer'
                                                 }`}
                                                 onMouseDown={(e) => {
@@ -324,17 +324,17 @@ function Menu(props) {
                                                 }}
                                             >
                                                 {currentBooking ? (
-                                                    <div className={`w-full h-full rounded-lg p-2.5 shadow-sm flex flex-col justify-center overflow-hidden cursor-default ${userColorClass}`}>
+                                                    <div className={`w-full h-full rounded-lg p-2 shadow-sm flex flex-col justify-center overflow-hidden cursor-default ${userColorClass}`}>
                                                         <div className="flex items-center gap-1.5 mb-0.5">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
-                                                            <span className="text-[10px] font-bold uppercase truncate">{currentBooking.Title}</span>
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-current opacity-70 shrink-0" />
+                                                            <span className="text-[9px] md:text-[10px] font-bold uppercase truncate">{currentBooking.Title}</span>
                                                         </div>
-                                                        <span className="text-[14px] opacity-80 font-medium truncate ml-3">
+                                                        <span className="text-[12px] md:text-[14px] opacity-80 font-medium truncate ml-3">
                                                             {currentBooking.User?.Firstname} {currentBooking.User?.Surname}
                                                         </span>
                                                     </div>
                                                 ) : (
-                                                    <span className={`text-[10px] font-bold tracking-tight hover:scale-105 transition-transform ${
+                                                    <span className={`text-[9px] md:text-[10px] font-bold tracking-tight hover:scale-105 transition-transform ${
                                                         isSelected ? 'text-blue-600' : 'text-emerald-500'
                                                     }`}>
                                                         {isSelected ? 'Release to Book' : '+ Available'}
@@ -404,7 +404,6 @@ function MainScreen() {
                 const profile = data && data.length > 0 ? data[0] : null;
 
                 if (profileError || !profile || !profile.Firstname) {
-                    console.warn("User bypassed signup. Denying access.");
                     setErrorMessage("You do not have access. Your account isn't set up correctly. Please use your official invite link.");
                     setShowError(true);
                     setIsAccessDenied(true); 
