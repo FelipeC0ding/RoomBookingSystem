@@ -209,25 +209,26 @@ export default class FetchDAL {
     static async executeSecureBooking(roomID, datesArray, duration, title, description) {
         try {
             const user = await this.getUserData();
+            if (!user) {
+                return { isValid: false, error: "Not authenticated." };
+            }
+
             const [startTime, endTime] = duration.split(" - ");
-            const dateBooked = new Date().toISOString().split('T')[0];
-            
-            // Fire the single payload to the database
+
             const { data, error } = await supabase.rpc('create_bookings_batch', {
                 p_room_id: parseInt(roomID),
-                p_user_id: user.id,
                 p_booking_dates: datesArray,
                 p_start_time: startTime + ':00',
                 p_end_time: endTime + ':00',
                 p_title: title,
-                p_description: description,
-                p_created_time: dateBooked
+                p_description: description
+                // no p_user_id, no p_created_time — server derives/sets these itself
             });
 
             if (error) throw error;
 
             if (!data.success) {
-                console.error(data.error); 
+                console.error(data.error);
                 return { isValid: false, error: data.error };
             }
 

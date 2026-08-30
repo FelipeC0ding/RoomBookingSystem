@@ -298,14 +298,14 @@ function Menu(props) {
                         <option value="50">50+ Seats</option>
                         <option value="100">100+ Seats</option>
                     </select>
-                    
+                                        
                     <div className="relative">
                         <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                         <input
                             type="date"
                             value={props.viewDate}
                             onChange={(e) => props.setViewDate(e.target.value)}
-                            className="bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 w-[140px]"
+                            className="bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 w-[160px]" 
                         />
                     </div>
 
