@@ -3,6 +3,73 @@ import { cacheGet, cacheSet, cacheDelete } from '../lib/cache.js';
 
 export default class FetchDAL {
 
+    static async getCategories() {
+        console.log("--- Executing Category fetch ---");
+        try {
+            const { data, error } = await supabase.rpc('get_categories');
+            
+            if (error) throw error;
+            return data || [];
+            
+        } catch (error) {
+            console.error('Error fetching categories:', error.message);
+            return [];
+        }
+    }
+
+    static async addCategory(categoryName) {
+        console.log('Adding new category via RPC:', categoryName);
+        try {
+            const { data: newId, error } = await supabase.rpc('add_category', { 
+                p_name: categoryName 
+            });
+            
+            if (error) throw error;
+            return { success: true, id: newId };
+            
+        } catch (error) {
+            console.error('Add Category Error:', error.message);
+            return { success: false, error: error.message };
+        }
+    }
+
+    static async editCategory(categoryId, categoryName) {
+        console.log('Updating category via RPC:', categoryId);
+        try {
+            const { data: success, error } = await supabase.rpc('edit_category', { 
+                p_id: categoryId, 
+                p_name: categoryName 
+            });
+            
+            if (error) throw error;
+            if (!success) console.warn('Category update failed: Category not found.');
+            
+            return { success };
+            
+        } catch (error) {
+            console.error('Update Category Error:', error.message);
+            return { success: false, error: error.message };
+        }
+    }
+
+    static async deleteCategory(categoryId) {
+        console.log('Deleting category via RPC:', categoryId);
+        try {
+            const { data: success, error } = await supabase.rpc('delete_category', { 
+                p_id: categoryId 
+            });
+            
+            if (error) throw error;
+            if (!success) console.warn('Category delete failed: Category not found.');
+            
+            return { success };
+            
+        } catch (error) {
+            console.error('Delete Category Error:', error.message);
+            return { success: false, error: error.message };
+        }
+    }
+
     static async invalidateBookingCaches(userID, roomID = null) {
         const keysToDelete = [
             `bookings:user:${userID}`,
@@ -478,13 +545,14 @@ export default class FetchDAL {
         return data;
     }
 
-    static async AddNewRoom(title, location, capacity, features) {
+    static async AddNewRoom(title, location, capacity, features, categoryIds) {
         try {
             const { data: success, error } = await supabase.rpc('insert_room_admin', {
                 p_room_name: title,
                 p_location: location,
                 p_capacity: parseInt(capacity),
-                p_features: features
+                p_features: features,
+                p_category_ids: categoryIds 
             });
                 
             if (error) throw error;
@@ -501,7 +569,7 @@ export default class FetchDAL {
         }
     }
 
-    static async UpdateRooms(id, roomName, location, capacity, features) {
+    static async UpdateRooms(id, roomName, location, capacity, features, categoryIds) {
         console.log('Saving room changes', id, roomName);
         try {
             const { data: success, error } = await supabase.rpc('update_room_admin', {
@@ -509,7 +577,8 @@ export default class FetchDAL {
                 p_room_name: roomName,
                 p_location: location,
                 p_capacity: parseInt(capacity),
-                p_features: features
+                p_features: features,
+                p_category_ids: categoryIds 
             });
 
             if (error) throw error;

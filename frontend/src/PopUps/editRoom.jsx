@@ -1,17 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Users, Info, Trash2, MapPin, DoorOpen, List } from 'lucide-react';
-import fetchData from '../DAL/FetchData';
+import { X, Save, Users, Info, Trash2, MapPin, DoorOpen, List, Tag } from 'lucide-react';
+import fetchData from '../DAL/FetchData'; 
 
 function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
+    const [categories, setCategories] = useState([]);
     const [formData, setFormData] = useState({
         name: "",
         location: "",
         capacity: 0,
-        features: ""
+        features: "",
+        category_ids: [] 
     });
     
-    // Safety state for deletion confirmation
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+
+    // Use FetchDAL to securely get categories
+    useEffect(() => {
+        const loadCategories = async () => {
+            const data = await fetchData.getCategories();
+            if (data) setCategories(data);
+        };
+        if (isOpen) loadCategories();
+    }, [isOpen]);
 
     useEffect(() => {
         if (room) {
@@ -20,7 +30,8 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
                 name: room.RoomName || "",
                 location: room.Location || "",
                 capacity: room.Capacity || 0,
-                features: room.Features || ""
+                features: room.Features || "",
+                category_ids: room.category_ids || [] 
             });
         }
         setIsConfirmingDelete(false);
@@ -28,12 +39,22 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
 
     if (!isOpen) return null;
 
+    const toggleCategory = (categoryId) => {
+        setFormData(prev => {
+            const currentIds = prev.category_ids || [];
+            if (currentIds.includes(categoryId)) {
+                return { ...prev, category_ids: currentIds.filter(id => id !== categoryId) };
+            } else {
+                return { ...prev, category_ids: [...currentIds, categoryId] };
+            }
+        });
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex justify-end overflow-hidden bg-slate-900/40 backdrop-blur-sm">
             <div className="absolute inset-0" onClick={onClose} />
             <div className="relative w-full max-w-md bg-white shadow-2xl h-full flex flex-col animate-in slide-in-from-right duration-300">
                 
-                {/* Header - Cleaned up to match the Admin theme */}
                 <div className="px-6 py-5 border-b border-slate-200 bg-white">
                     <div className="flex items-start justify-between">
                         <div>
@@ -48,7 +69,6 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
                     </div>
                 </div>
 
-                {/* Scrollable Content */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50">
                     <div className="space-y-1.5">
                         <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
@@ -59,7 +79,6 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
                             value={formData.name}
                             onChange={(e) => setFormData({...formData, name: e.target.value})}
                             className="w-full rounded-xl border border-slate-200 bg-white p-3 text-slate-800 shadow-sm focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all outline-none"
-                            placeholder="e.g. Boardroom Alpha"
                         />
                     </div>
 
@@ -72,8 +91,41 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
                             value={formData.location}
                             onChange={(e) => setFormData({...formData, location: e.target.value})}
                             className="w-full rounded-xl border border-slate-200 bg-white p-3 text-slate-800 shadow-sm focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all outline-none"
-                            placeholder="e.g. 1st Floor, East Wing"
                         />
+                    </div>
+
+                    <div className="space-y-3">
+                        <label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                            <Tag size={14} /> Room Categories
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                            {categories.length === 0 ? (
+                                <span className="text-sm text-slate-400 italic bg-slate-50 p-3 rounded-lg border border-slate-100 w-full">
+                                    No categories available. Please add some in the Admin panel first.
+                                </span>
+                            ) : (
+                                categories.map(cat => {
+                                    const isSelected = formData.category_ids.includes(cat.id);
+                                    return (
+                                        <button
+                                            key={cat.id}
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                toggleCategory(cat.id);
+                                            }}
+                                            className={`px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
+                                                isSelected 
+                                                ? 'bg-blue-100 border-blue-500 text-blue-700' 
+                                                : 'bg-slate-50 border-slate-100 text-slate-500 hover:border-slate-300'
+                                            }`}
+                                        >
+                                            {cat.name}
+                                        </button>
+                                    );
+                                })
+                            )}
+                        </div>
                     </div>
 
                     <div className="space-y-1.5">
@@ -97,7 +149,6 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
                             onChange={(e) => setFormData({...formData, features: e.target.value})}
                             rows="3"
                             className="w-full rounded-xl border border-slate-200 bg-white p-3 text-slate-800 shadow-sm focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all outline-none resize-none"
-                            placeholder="e.g. WiFi, Projector, Air Conditioning..."
                         />
                     </div>
 
@@ -109,11 +160,9 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
                     </div>
                 </div>
 
-                {/* Footer Actions */}
                 <div className="border-t border-slate-200 p-6 bg-white space-y-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.02)]">
                     {!isConfirmingDelete ? (
                         <div className="flex gap-3">
-                            {/* Delete Button */}
                             <button
                                 onClick={() => setIsConfirmingDelete(true)}
                                 className="flex items-center justify-center rounded-xl border border-slate-200 bg-white p-3.5 text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-all group"
@@ -122,7 +171,6 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
                                 <Trash2 size={20} className="group-hover:scale-110 transition-transform" />
                             </button>
                             
-                            {/* Cancel Button */}
                             <button
                                 onClick={onClose}
                                 className="flex-[2] rounded-xl bg-white border border-slate-200 p-3.5 font-semibold text-slate-600 hover:bg-slate-50 transition-all"
@@ -130,7 +178,6 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
                                 Cancel
                             </button>
 
-                            {/* Save Button - Updated to match Dark Navy theme */}
                             <button
                                 onClick={() => onSave(room.RoomID, formData)}
                                 className="flex-[3] rounded-xl bg-slate-900 p-3.5 font-semibold text-white shadow-sm hover:bg-slate-800 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
@@ -139,7 +186,6 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
                             </button>
                         </div>
                     ) : (
-                        /* Deletion Confirmation State */
                         <div className="flex gap-3 animate-in fade-in slide-in-from-bottom-2">
                             <button
                                 onClick={() => onDelete(room.RoomID)}

@@ -1,25 +1,46 @@
-import React, { useState } from 'react';
-import { X, Plus, Users, Info, MapPin, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Plus, Users, Info, MapPin, Sparkles, Tag } from 'lucide-react';
+import fetchData from '../DAL/FetchData'; // Replaced Supabase import
 
 function AddRoom({ isOpen, onClose, onAdd }) {
+    const [categories, setCategories] = useState([]);
     const [formData, setFormData] = useState({
         name: "",
         location: "",
         capacity: 0,
-        features: ""
+        features: "",
+        category_ids: [] 
     });
+
+    // Use FetchDAL to securely get categories
+    useEffect(() => {
+        const loadCategories = async () => {
+            const data = await fetchData.getCategories();
+            if (data) setCategories(data);
+        };
+        if (isOpen) loadCategories();
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
+    const toggleCategory = (categoryId) => {
+        setFormData(prev => {
+            const currentIds = prev.category_ids || [];
+            if (currentIds.includes(categoryId)) {
+                return { ...prev, category_ids: currentIds.filter(id => id !== categoryId) };
+            } else {
+                return { ...prev, category_ids: [...currentIds, categoryId] };
+            }
+        });
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex justify-end overflow-hidden bg-slate-900/40 backdrop-blur-sm">
-            {/* Backdrop click to close */}
             <div className="absolute inset-0" onClick={onClose} />
             
             <div className="relative w-full max-w-md bg-white shadow-2xl animate-in slide-in-from-right duration-300">
                 <div className="flex h-full flex-col">
 
-                    {/* Header */}
                     <div className="bg-slate-900 p-6 text-white">
                         <div className="flex items-center justify-between">
                             <div className="flex flex-col">
@@ -31,19 +52,13 @@ function AddRoom({ isOpen, onClose, onAdd }) {
                                     Create a new workspace entry
                                 </span>
                             </div>
-                            <button 
-                                onClick={onClose} 
-                                className="rounded-lg p-2 hover:bg-slate-800 transition-colors"
-                            >
+                            <button onClick={onClose} className="rounded-lg p-2 hover:bg-slate-800 transition-colors">
                                 <X size={24} />
                             </button>
                         </div>
                     </div>
 
-                    {/* Form Body */}
                     <div className="flex-1 overflow-y-auto p-8 space-y-8">
-                        
-                        {/* Room Name */}
                         <div className="space-y-2">
                             <label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
                                 <Sparkles size={14} /> Room Title
@@ -56,7 +71,6 @@ function AddRoom({ isOpen, onClose, onAdd }) {
                             />
                         </div>
 
-                        {/* Location */}
                         <div className="space-y-2">
                             <label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
                                 <MapPin size={14} /> Location / Floor
@@ -69,7 +83,40 @@ function AddRoom({ isOpen, onClose, onAdd }) {
                             />
                         </div>
 
-                        {/* Capacity */}
+                        <div className="space-y-3">
+                            <label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                <Tag size={14} /> Room Categories
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                                {categories.length === 0 ? (
+                                    <span className="text-sm text-slate-400 italic bg-slate-50 p-3 rounded-lg border border-slate-100 w-full">
+                                        No categories available. Please add some in the Admin panel first.
+                                    </span>
+                                ) : (
+                                    categories.map(cat => {
+                                        const isSelected = formData.category_ids.includes(cat.id);
+                                        return (
+                                            <button
+                                                key={cat.id}
+                                                type="button" 
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    toggleCategory(cat.id);
+                                                }}
+                                                className={`px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
+                                                    isSelected 
+                                                    ? 'bg-blue-100 border-blue-500 text-blue-700' 
+                                                    : 'bg-slate-50 border-slate-100 text-slate-500 hover:border-slate-300'
+                                                }`}
+                                            >
+                                                {cat.name}
+                                            </button>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
+
                         <div className="space-y-2">
                             <label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
                                 <Users size={14} /> Max Capacity
@@ -82,7 +129,6 @@ function AddRoom({ isOpen, onClose, onAdd }) {
                             />
                         </div>
 
-                        {/* Features */}
                         <div className="space-y-2">
                             <label className="text-xs font-black uppercase tracking-widest text-slate-400">Key Features</label>
                             <textarea
@@ -93,7 +139,6 @@ function AddRoom({ isOpen, onClose, onAdd }) {
                             />
                         </div>
 
-                        {/* Info Note */}
                         <div className="flex gap-3 rounded-2xl bg-blue-50 p-4 border border-blue-100">
                             <Info className="text-blue-500 shrink-0" size={20} />
                             <p className="text-xs text-blue-700 leading-relaxed font-medium">
@@ -102,7 +147,6 @@ function AddRoom({ isOpen, onClose, onAdd }) {
                         </div>
                     </div>
 
-                    {/* Footer Actions */}
                     <div className="border-t border-slate-100 p-6 bg-slate-50">
                         <div className="flex gap-3">
                             <button
@@ -112,7 +156,7 @@ function AddRoom({ isOpen, onClose, onAdd }) {
                                 Cancel
                             </button>
                             <button
-                                onClick={() => onAdd(formData.name, formData.location, formData.capacity, formData.features)}
+                                onClick={() => onAdd(formData.name, formData.location, formData.capacity, formData.features, formData.category_ids)}
                                 className="flex-[2] rounded-xl bg-blue-600 p-4 font-black text-white shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-2"
                             >
                                 <Plus size={20} strokeWidth={3} /> Create Room

@@ -2,16 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, ShieldAlert, Settings, LogOut, Filter, Calendar } from 'lucide-react';
 import AdminPage from './Admin.jsx';
-import fetchData from './DAL/FetchData.js'
-import timeCalcs from './calculations/TimeCalcs.js'
+import fetchData from './DAL/FetchData.js';
+import timeCalcs from './calculations/TimeCalcs.js';
 import PopUp from './PopUps/BookRoom.jsx';
 import ErrorPopUp from './PopUps/ErrorPopUp.jsx';
-import ProfilePage from './profile.jsx'
-import { supabase } from './supabaseClient'
+import ProfilePage from './profile.jsx';
+import { supabase } from './supabaseClient';
 import { getUserColour } from './colourUtils';
 
 function Menu(props) {
     const [rooms, setRooms] = useState([]);
+    const [categories, setCategories] = useState([]);
     const [selectedRoomForWeek, setSelectedRoomForWeek] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [bookings, setBookings] = useState([]);
@@ -34,6 +35,7 @@ function Menu(props) {
         return d.toISOString().split('T')[0];
     });
 
+    // 1. Load Initial Rooms & Categories
     useEffect(() => {
         async function getRoomsToDisplay() {
             const data = await fetchData.getRooms();
@@ -44,6 +46,9 @@ function Menu(props) {
             if (data === null) {
                 handleErrorMessage('Your account setup is not complete. Contact your admin');
             }
+            
+            const catData = await fetchData.getCategories();
+            if (catData) setCategories(catData);
         }
         getRoomsToDisplay();
     }, []);
@@ -63,6 +68,7 @@ function Menu(props) {
         setShowError(true);
     };
 
+    // 2. Load Bookings (Initial Fetch)
     const loadData = async (showLoadingScreen = true) => {
         if (showLoadingScreen) {
             setIsLoading(true);
@@ -99,6 +105,62 @@ function Menu(props) {
         }
     }, [props.viewDate, props.viewType, selectedRoomForWeek, rooms]);
 
+
+   // 3. 🟢 REALTIME WEBSOCKET SUBSCRIPTION (ORG SPECIFIC) 🟢
+    useEffect(() => {
+        // Wait until the secure RPC has loaded this organization's rooms
+        if (!rooms || rooms.length === 0) return;
+
+        // Create a comma-separated list of RoomIDs (e.g., "1,2,5,12")
+        const orgRoomIds = rooms.map(r => r.RoomID).join(',');
+
+        const bookingSubscription = supabase
+            .channel('public-Booking-changes')
+            .on(
+                'postgres_changes',
+                { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'Booking',
+                    filter: `RoomID=in.(${orgRoomIds})` // <-- ONLY fetch bookings for these specific rooms
+                },
+                async (payload) => {
+                    // Handle New Bookings
+                    if (payload.eventType === 'INSERT') {
+                        const newBooking = payload.new;
+                        
+                        const { data: userData } = await supabase
+                            .from('User') 
+                            .select('Firstname, Surname')
+                            .eq('id', newBooking.UserID)
+                            .single();
+
+                        newBooking.User = userData || { Firstname: 'Unknown', Surname: 'User' };
+                        setBookings(prev => [...prev, newBooking]);
+                    }
+
+                    // Handle Cancelled/Deleted Bookings
+                    if (payload.eventType === 'DELETE') {
+                        setBookings(prev => prev.filter(b => b.BookingID !== payload.old.BookingID));
+                    }
+
+                    // Handle Edited/Updated Bookings
+                    if (payload.eventType === 'UPDATE') {
+                        setBookings(prev => prev.map(b => 
+                            b.BookingID === payload.new.BookingID ? { ...b, ...payload.new } : b
+                        ));
+                    }
+                }
+            )
+            .subscribe();
+
+        // Cleanup the WebSocket
+        return () => supabase.removeChannel(bookingSubscription);
+        
+    }, [rooms]); // <-- Notice we added `rooms` to the dependency array!
+
+
+    // 4. Drag & Drop Handlers
     useEffect(() => {
         const handleGlobalMouseUp = () => {
             if (dragState.isDragging) {
@@ -158,9 +220,13 @@ function Menu(props) {
         setDragState({ isDragging: false, colKey: null, startIdx: -1, currentIdx: -1, item: null });
     };
 
-    const filteredRooms = rooms.filter(room =>
-        room.RoomName.toLowerCase().includes(props.roomFilter.toLowerCase())
-    );
+    // 5. Filter Logic
+    const filteredRooms = rooms.filter(room => {
+        const matchesSearch = room.RoomName?.toLowerCase().includes(props.roomFilter.toLowerCase());
+        const matchesCategory = props.categoryFilter === 'All' || (room.category_ids && room.category_ids.includes(props.categoryFilter));
+        const matchesCapacity = props.capacityFilter === '' || (room.Capacity && room.Capacity >= parseInt(props.capacityFilter));
+        return matchesSearch && matchesCategory && matchesCapacity;
+    });
 
     const bookingMap = {};
 
@@ -206,7 +272,6 @@ function Menu(props) {
                     </div>
                 </div>
 
-                {/* MODIFIED: Flex wrap added to prevent toolbar from expanding page width */}
                 <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex flex-wrap items-center gap-3 w-full">
                     <div className="relative flex-1 min-w-[140px]">
                         <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -218,6 +283,29 @@ function Menu(props) {
                             placeholder="Find Room"
                         />
                     </div>
+
+                    <select
+                        value={props.categoryFilter}
+                        onChange={(e) => props.setCategoryFilter(e.target.value)}
+                        className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-slate-600 outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+                    >
+                        <option value="All">All Categories</option>
+                        {categories.map(cat => (
+                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                    </select>
+
+                    <select
+                        value={props.capacityFilter}
+                        onChange={(e) => props.setCapacityFilter(e.target.value)}
+                        className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-slate-600 outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+                    >
+                        <option value="">Any Capacity</option>
+                        <option value="20">20+ Seats</option>
+                        <option value="30">30+ Seats</option>
+                        <option value="50">50+ Seats</option>
+                        <option value="100">100+ Seats</option>
+                    </select>
                     
                     <div className="relative">
                         <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -260,7 +348,6 @@ function Menu(props) {
                 </div>
             </div>
 
-            {/* MODIFIED: Forced this wrapper to be strictly scrollable horizontally */}
             <div className="w-full flex-1 overflow-x-auto p-4 md:p-6 flex justify-start md:justify-center">
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-40 mx-auto w-full">
@@ -360,9 +447,12 @@ function Menu(props) {
                 bookingDate={popupConfig.bookingDate} 
                 onClose={async (returnedError) => {
                     setPopupConfig(prev => ({ ...prev, isOpen: false }));
-                    await loadData(false);
+                    // Since Realtime is handling global updates, 
+                    // we only call loadData(false) if the popup explicitly asks for it 
+                    // or returns an error.
                     if (returnedError && typeof returnedError === 'string') {
                         handleErrorMessage(returnedError);
+                        await loadData(false);
                     }
                 }}
             />
@@ -378,7 +468,11 @@ function Menu(props) {
 function MainScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [isAccessDenied, setIsAccessDenied] = useState(false);
+    
     const [roomFilter, setRoomFilter] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState('All');
+    const [capacityFilter, setCapacityFilter] = useState('');
+    
     const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]);
     const [viewType, setViewType] = useState('day');
     const [activePage, setActivePage] = useState('menu'); 
@@ -489,6 +583,10 @@ function MainScreen() {
             <Menu
                 roomFilter={roomFilter}
                 setRoomFilter={setRoomFilter}
+                categoryFilter={categoryFilter}
+                setCategoryFilter={setCategoryFilter}
+                capacityFilter={capacityFilter}
+                setCapacityFilter={setCapacityFilter}
                 viewDate={viewDate}
                 setViewDate={setViewDate}
                 viewType={viewType}

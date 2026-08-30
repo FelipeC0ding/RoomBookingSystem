@@ -4,30 +4,37 @@ import {
     Plus, 
     Search, 
     Edit2, 
-    Trash2, 
     Users, 
-    Filter,
-    LayoutGrid
+    Tag
 } from 'lucide-react';
-import fetchData from './DAL/FetchData'
-import EditRoom from './PopUps/editRoom'
-import AddRoom from './PopUps/AddRoom'
+import fetchData from './DAL/FetchData';
+import EditRoom from './PopUps/editRoom';
+import AddRoom from './PopUps/AddRoom';
+import ManageCategories from './PopUps/ManageCategories'; // NEW Import
 
 function ManageRooms({ onGoBack }) {
     const [searchTerm, setSearchTerm] = useState("");
-    const [popUpOpen, setPopUpState] = useState(false)
-    const [selectedRoom, setSelectedRoom] = useState(null)
+    const [popUpOpen, setPopUpState] = useState(false);
+    const [selectedRoom, setSelectedRoom] = useState(null);
     const [rooms, setRooms] = useState([]);
-    const [addNewRoomState, setAddRoom] = useState(false)
     
-    useEffect(()=>{
-        async function getALlRooms(){
-            const data = await fetchData.getRooms();
-            setRooms(data)
-        }
-        getALlRooms();
-    },[])
+    // Popup states
+    const [addNewRoomState, setAddRoom] = useState(false);
+    const [manageCategoriesOpen, setManageCategoriesOpen] = useState(false);
 
+    // State for categories (needed for the table display)
+    const [categories, setCategories] = useState([]);
+    
+    useEffect(() => {
+        async function loadData() {
+            const data = await fetchData.getRooms();
+            setRooms(data || []);
+
+            const catData = await fetchData.getCategories();
+            setCategories(catData || []);
+        }
+        loadData();
+    }, []);
 
     const filteredRooms = rooms.filter((room) => {
         const term = searchTerm.toLowerCase();
@@ -53,6 +60,7 @@ function ManageRooms({ onGoBack }) {
                     </button>
                 </div>
 
+                {/* Toolbar */}
                 <div className="bg-white p-4 rounded-2xl shadow-md border border-slate-200 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between w-full">
                     <div className="relative w-full md:w-96">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
@@ -65,8 +73,17 @@ function ManageRooms({ onGoBack }) {
                     </div>
 
                     <div className="flex w-full md:w-auto gap-3">
-                        <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-black hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-200"
-                            onClick={()=>setAddRoom(true)}
+                        <button 
+                            onClick={() => setManageCategoriesOpen(true)}
+                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold hover:bg-slate-50 active:scale-95 transition-all shadow-sm"
+                        >
+                            <Tag size={20} />
+                            Manage Categories
+                        </button>
+                        
+                        <button 
+                            onClick={() => setAddRoom(true)}
+                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-black hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-200"
                         >
                             <Plus size={22} strokeWidth={3} />
                             Add New Room
@@ -74,97 +91,125 @@ function ManageRooms({ onGoBack }) {
                     </div>
                 </div>
 
-                {/* MODIFIED: Forced constraint and horizontal scroll on the table */}
+                {/* Rooms Table */}
                 <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden w-full">
                     <div className="w-full max-w-full overflow-x-auto">
                         <table className="w-full text-left border-collapse min-w-[800px]">
                             <thead>
                                 <tr className="bg-slate-50 border-b border-slate-200">
                                     <th className="px-6 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter">Room Name</th>
+                                    <th className="px-6 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter">Categories</th>
                                     <th className="px-6 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter">Capacity</th>
                                     <th className="px-6 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter">Features</th>
                                     <th className="px-6 py-5 text-slate-400 text-xs uppercase font-black tracking-tighter text-right">Edit</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {filteredRooms.map((room) => (
-                                    <tr key={room.id} className="hover:bg-slate-50/50 transition-colors">
-                                        <td className="px-6 py-6">
-                                            <span className="block font-black text-slate-900 text-base md:text-lg uppercase tracking-tight">{room.RoomName}</span>
-                                        </td>
-                                        <td className="px-6 py-6">
-                                            <div className="flex items-center gap-2 text-slate-700">
-                                                <div className="p-2 bg-slate-100 rounded-lg">
-                                                    <Users size={16} />
-                                                </div>
-                                                <span className="font-bold text-base">{room.Capacity}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-6">
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {room.Features && (
-                                                    <span className="border border-slate-200 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-white">
-                                                        {room.Features}
-                                                    </span>
+                                {filteredRooms.map((room) => {
+                                    const roomCategories = categories.filter(c => room.category_ids?.includes(c.id));
+                                    
+                                    return (
+                                        <tr key={room.RoomID || room.id} className="hover:bg-slate-50/50 transition-colors">
+                                            <td className="px-6 py-6">
+                                                <span className="block font-black text-slate-900 text-base md:text-lg uppercase tracking-tight">{room.RoomName}</span>
+                                            </td>
+                                            <td className="px-6 py-6">
+                                                {roomCategories.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {roomCategories.map(cat => (
+                                                            <span key={cat.id} className="bg-blue-50 text-blue-600 border border-blue-100 px-2.5 py-1 rounded-md text-xs font-bold">
+                                                                {cat.name}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-slate-400 text-sm italic">Uncategorized</span>
                                                 )}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-6">
-                                            <div className="flex justify-end gap-3">
-                                                <button 
-                                                    className="flex items-center gap-1 px-3 py-2 bg-slate-100 text-slate-600 rounded-lg font-bold text-xs hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-                                                    onClick={() =>
-                                                        {setPopUpState(true);
-                                                        setSelectedRoom(room);
-                                                    }}
-                                                >
-                                                    <Edit2 size={14} />
-                                                    Edit
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
+                                            </td>
+                                            <td className="px-6 py-6">
+                                                <div className="flex items-center gap-2 text-slate-700">
+                                                    <div className="p-2 bg-slate-100 rounded-lg">
+                                                        <Users size={16} />
+                                                    </div>
+                                                    <span className="font-bold text-base">{room.Capacity}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-6">
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {room.Features && (
+                                                        <span className="border border-slate-200 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-white">
+                                                            {room.Features}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-6">
+                                                <div className="flex justify-end gap-3">
+                                                    <button 
+                                                        className="flex items-center gap-1 px-3 py-2 bg-slate-100 text-slate-600 rounded-lg font-bold text-xs hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                                                        onClick={() => {
+                                                            setPopUpState(true);
+                                                            setSelectedRoom(room);
+                                                        }}
+                                                    >
+                                                        <Edit2 size={14} />
+                                                        Edit
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
+            {/* Modals */}
+            <ManageCategories 
+                isOpen={manageCategoriesOpen}
+                onClose={() => setManageCategoriesOpen(false)}
+                onCategoriesUpdated={(updatedCats) => setCategories(updatedCats)}
+            />
+
             <EditRoom 
                 room={selectedRoom} 
                 isOpen={popUpOpen} 
                 onClose={() => setPopUpState(false)} 
-                onSave={async(id,updatedData) => {
-                    await fetchData.UpdateRooms(id,updatedData.name, updatedData.location, updatedData.capacity, updatedData.features)
-                    console.log("Saving to Supabase:", updatedData);
+                onSave={async(id, updatedData) => {
+                    await fetchData.UpdateRooms(
+                        id,
+                        updatedData.name, 
+                        updatedData.location, 
+                        updatedData.capacity, 
+                        updatedData.features,
+                        updatedData.category_ids
+                    );
                     setPopUpState(false);
-                    const updatedRoooms = await fetchData.getRooms();
-                    setRooms(updatedRoooms);
-                    setPopUpState()
+                    const updatedRooms = await fetchData.getRooms();
+                    setRooms(updatedRooms);
                 }}
-                onDelete={async(roomID) =>{
-                    await fetchData.deleteRoom(roomID)
+                onDelete={async(roomID) => {
+                    await fetchData.deleteRoom(roomID);
                     setPopUpState(false);
-                    const updatedRoooms = await fetchData.getRooms();
-                    setRooms(updatedRoooms);
-                    setPopUpState()
+                    const updatedRooms = await fetchData.getRooms();
+                    setRooms(updatedRooms);
                 }}
             />
 
             <AddRoom 
                 isOpen={addNewRoomState} 
                 onClose={() => setAddRoom(false)} 
-                onAdd={async(title, location, capacity, features) => {
-                    await fetchData.AddNewRoom(title, location, capacity, features)
-                    console.log("Saving new room to Supabase:",);
+                onAdd={async(title, location, capacity, features, categoryIds) => {
+                    await fetchData.AddNewRoom(title, location, capacity, features, categoryIds);
                     setAddRoom(false);
-                    const updatedRoooms = await fetchData.getRooms();
-                    setRooms(updatedRoooms);
-                    setAddRoom()
+                    const updatedRooms = await fetchData.getRooms();
+                    setRooms(updatedRooms);
                 }}
             />
         </div>
     );
 }
+
 export default ManageRooms;
