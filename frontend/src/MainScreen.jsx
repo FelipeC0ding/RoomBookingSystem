@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, ShieldAlert, Settings, LogOut, Filter, Calendar } from 'lucide-react';
+import { User, Settings, LogOut, Filter, Calendar } from 'lucide-react';
 import AdminPage from './Admin.jsx';
 import fetchData from './DAL/FetchData.js';
 import timeCalcs from './calculations/TimeCalcs.js';
@@ -106,12 +106,8 @@ function Menu(props) {
     }, [props.viewDate, props.viewType, selectedRoomForWeek, rooms]);
 
 
-   // 3. 🟢 REALTIME WEBSOCKET SUBSCRIPTION (ORG SPECIFIC) 🟢
     useEffect(() => {
-        // Wait until the secure RPC has loaded this organization's rooms
         if (!rooms || rooms.length === 0) return;
-
-        // Create a comma-separated list of RoomIDs (e.g., "1,2,5,12")
         const orgRoomIds = rooms.map(r => r.RoomID).join(',');
 
         const bookingSubscription = supabase
@@ -125,7 +121,6 @@ function Menu(props) {
                     filter: `RoomID=in.(${orgRoomIds})` // <-- ONLY fetch bookings for these specific rooms
                 },
                 async (payload) => {
-                    // Handle New Bookings
                     if (payload.eventType === 'INSERT') {
                         const newBooking = payload.new;
                         
@@ -139,12 +134,10 @@ function Menu(props) {
                         setBookings(prev => [...prev, newBooking]);
                     }
 
-                    // Handle Cancelled/Deleted Bookings
                     if (payload.eventType === 'DELETE') {
                         setBookings(prev => prev.filter(b => b.BookingID !== payload.old.BookingID));
                     }
 
-                    // Handle Edited/Updated Bookings
                     if (payload.eventType === 'UPDATE') {
                         setBookings(prev => prev.map(b => 
                             b.BookingID === payload.new.BookingID ? { ...b, ...payload.new } : b
@@ -157,8 +150,7 @@ function Menu(props) {
         // Cleanup the WebSocket
         return () => supabase.removeChannel(bookingSubscription);
         
-    }, [rooms]); // <-- Notice we added `rooms` to the dependency array!
-
+    }, [rooms]); 
 
     // 4. Drag & Drop Handlers
     useEffect(() => {

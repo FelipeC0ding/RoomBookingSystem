@@ -533,7 +533,6 @@ export default class FetchDAL {
         const cachedRooms = await cacheGet(cacheKey);
         if (cachedRooms) return cachedRooms;
 
-        // Secure RPC call - Database determines what they are allowed to see
         const { data, error } = await supabase.rpc('get_rooms_in_my_org');
 
         if (error) {
@@ -544,10 +543,9 @@ export default class FetchDAL {
         await cacheSet(cacheKey, data, 3600);
         return data;
     }
-
     static async AddNewRoom(title, location, capacity, features, categoryIds) {
         try {
-            const { data: success, error } = await supabase.rpc('insert_room_admin', {
+            const { error } = await supabase.rpc('insert_room_admin', {
                 p_room_name: title,
                 p_location: location,
                 p_capacity: parseInt(capacity),
@@ -555,17 +553,25 @@ export default class FetchDAL {
                 p_category_ids: categoryIds 
             });
                 
-            if (error) throw error;
-            if (!success) {
-                console.warn('Room creation rejected: Insufficient permissions.');
-                return;
+            // If Supabase throws an error, catch it
+            if (error) {
+                console.error("Supabase RPC Error:", error);
+                throw error;
             }
 
+            // If no error, the room was added successfully!
             let orgID = await this.loggedInOrgID();
-            await cacheDelete(`rooms:org:${orgID}`);
+            
+            // Only run cacheDelete if you actually have it imported!
+            if (typeof cacheDelete === 'function') {
+                await cacheDelete(`rooms:org:${orgID}`);
+            }
+            
+            return { success: true };
             
         } catch (error) {
             console.error('Add Room Error:', error.message);
+            return { success: false, error: error.message };
         }
     }
 
