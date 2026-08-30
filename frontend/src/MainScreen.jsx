@@ -118,18 +118,12 @@ function Menu(props) {
                     event: '*', 
                     schema: 'public', 
                     table: 'Booking',
-                    filter: `RoomID=in.(${orgRoomIds})` // <-- ONLY fetch bookings for these specific rooms
+                    filter: `RoomID=in.(${orgRoomIds})` 
                 },
                 async (payload) => {
                     if (payload.eventType === 'INSERT') {
                         const newBooking = payload.new;
-                        
-                        const { data: userData } = await supabase
-                            .from('User') 
-                            .select('Firstname, Surname')
-                            .eq('id', newBooking.UserID)
-                            .single();
-
+                        const userData = await fetchData.getUserPublicInfo(newBooking.UserID);
                         newBooking.User = userData || { Firstname: 'Unknown', Surname: 'User' };
                         setBookings(prev => [...prev, newBooking]);
                     }

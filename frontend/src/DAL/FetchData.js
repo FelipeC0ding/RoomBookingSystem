@@ -272,6 +272,22 @@ export default class FetchDAL {
         }
         return formattedList
     }
+
+    static async getUserPublicInfo(userId) {
+        try {
+            const { data, error } = await supabase
+                .rpc('get_user_public_info', { p_user_id: userId })
+                .single();
+
+            if (error) throw error;
+            return data;
+
+        } catch (error) {
+            console.error('User lookup failed:', error.message);
+            return null;
+        }
+    }
+
     static async createMonthlyRecurringBooking(description, roomID, bookingDate, duration, title, frequency, recurrenceLength, monthlyOrdinal, monthlyWeekday, monthlyType, skipweekend) {
         let datesToBook = [];
 
