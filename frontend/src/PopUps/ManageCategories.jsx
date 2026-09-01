@@ -52,7 +52,6 @@ function ManageCategories({ isOpen, onClose, onCategoriesUpdated }) {
                 <div className="px-6 py-5 border-b border-slate-200 bg-white">
                     <div className="flex items-start justify-between">
                         <div className="flex items-center gap-2">
-                            <Tag size={20} className="text-slate-700" />
                             <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Manage Categories</h2>
                         </div>
                         <button 
@@ -128,10 +127,10 @@ function ManageCategories({ isOpen, onClose, onCategoriesUpdated }) {
                 </div>
 
                 {/* Footer - Matches Edit Room Style */}
-                <div className="border-t border-slate-200 p-6 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.02)]">
+                <div className="border-t border-slate-100 p-6 bg-slate-50">
                     <button
-                        onClick={onClose}
-                        className="w-full rounded-xl bg-white border border-slate-200 p-3.5 font-semibold text-slate-600 hover:bg-slate-50 transition-all"
+                        onClick={onClose} // Or whatever function closes this modal
+                        className="w-full rounded-xl bg-blue-600 p-4 font-black text-white shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all"
                     >
                         Done
                     </button>

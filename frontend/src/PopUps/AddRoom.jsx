@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Users, Info, MapPin, Sparkles, Tag } from 'lucide-react';
-import fetchData from '../DAL/FetchData'; // Replaced Supabase import
+import fetchData from '../DAL/FetchData';
 
 function AddRoom({ isOpen, onClose, onAdd }) {
     const [categories, setCategories] = useState([]);
@@ -12,7 +12,6 @@ function AddRoom({ isOpen, onClose, onAdd }) {
         category_ids: [] 
     });
 
-    // Use FetchDAL to securely get categories
     useEffect(() => {
         const loadCategories = async () => {
             const data = await fetchData.getCategories();
@@ -41,19 +40,19 @@ function AddRoom({ isOpen, onClose, onAdd }) {
             <div className="relative w-full max-w-md bg-white shadow-2xl animate-in slide-in-from-right duration-300">
                 <div className="flex h-full flex-col">
 
-                    <div className="bg-slate-900 p-6 text-white">
-                        <div className="flex items-center justify-between">
+                    {/* MODIFIED HEADER: Removed navy background, replaced with white and border */}
+                    <div className="px-6 py-5 border-b border-slate-200 bg-white">
+                        <div className="flex items-start justify-between">
                             <div className="flex flex-col">
-                                <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
-                                    <Plus className="text-blue-400" size={24} strokeWidth={3} />
+                                <h2 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
                                     Add New Room
                                 </h2>
-                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                                    Create a new workspace entry
-                                </span>
                             </div>
-                            <button onClick={onClose} className="rounded-lg p-2 hover:bg-slate-800 transition-colors">
-                                <X size={24} />
+                            <button 
+                                onClick={onClose} 
+                                className="rounded-xl p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                            >
+                                <X size={20} />
                             </button>
                         </div>
                     </div>
