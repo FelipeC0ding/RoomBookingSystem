@@ -125,7 +125,12 @@ function Menu(props) {
                         const newBooking = payload.new;
                         const userData = await fetchData.getUserPublicInfo(newBooking.UserID);
                         newBooking.User = userData || { Firstname: 'Unknown', Surname: 'User' };
-                        setBookings(prev => [...prev, newBooking]);
+                        setBookings(prev => {
+                            if (prev.some(b => b.BookingID === newBooking.BookingID)) {
+                                return prev.map(b => b.BookingID === newBooking.BookingID ? { ...b, ...newBooking } : b);
+                            }
+                            return [...prev, newBooking];
+                        });
                     }
 
                     if (payload.eventType === 'DELETE') {
@@ -431,13 +436,12 @@ function Menu(props) {
                 roomID={popupConfig.roomID}
                 timeDuration={popupConfig.timeDuration}
                 bookingDate={popupConfig.bookingDate} 
-                onClose={async (returnedError) => {
+                onClose={async (returnedError, isSuccess) => {
                     setPopupConfig(prev => ({ ...prev, isOpen: false }));
-                    // Since Realtime is handling global updates, 
-                    // we only call loadData(false) if the popup explicitly asks for it 
-                    // or returns an error.
                     if (returnedError && typeof returnedError === 'string') {
                         handleErrorMessage(returnedError);
+                        await loadData(false);
+                    } else if (isSuccess) {
                         await loadData(false);
                     }
                 }}

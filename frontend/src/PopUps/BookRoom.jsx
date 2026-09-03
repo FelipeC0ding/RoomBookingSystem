@@ -268,7 +268,7 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", ro
                     setErrorMessage(`Booking could not be created. ${booked.error}`); 
                     return;
                   }
-                  onClose();
+                  onClose(null, true);
                 } else {
                   // Pass skipWeekends to the standard recurring function
                   booked = await fetchData.createRecurringBooking(
@@ -283,7 +283,7 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", ro
                     setErrorMessage(`Booking could not be created. ${booked?.error || 'Have any of these dates already been booked?'}`);
                     return;
                   }
-                  onClose();
+                  onClose(null, true);
                 }
               } else {
 
@@ -300,7 +300,7 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", ro
                     return;
                 }
 
-                onClose();
+                onClose(null, true);
               }
             }}
             className={`w-full py-4 px-6 font-bold rounded-2xl transition-all shadow-lg shadow-blue-200 active:scale-[0.98] ${

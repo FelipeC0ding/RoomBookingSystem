@@ -280,7 +280,13 @@ export default class FetchDAL {
                 .single();
 
             if (error) throw error;
-            return data;
+            if (!data) return null;
+
+            return {
+                Firstname: data.Firstname || data.firstname || data.first_name || '',
+                Surname: data.Surname || data.surname || data.last_name || '',
+                UserEmail: data.UserEmail || data.useremail || data.email || ''
+            };
 
         } catch (error) {
             console.error('User lookup failed:', error.message);
