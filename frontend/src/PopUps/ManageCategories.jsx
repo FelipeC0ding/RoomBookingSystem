@@ -1,50 +1,81 @@
 import React, { useState, useEffect } from 'react';
-import { X, Tag, Plus, Trash2, Info } from 'lucide-react';
+import { X, Tag, Plus, Trash2, Info, AlertCircle } from 'lucide-react';
 import fetchData from '../DAL/FetchData';
+import { validateCategoryName, validateUuid } from '../lib/validation';
+import ErrorPopup from './ErrorPopUp';
 
 function ManageCategories({ isOpen, onClose, onCategoriesUpdated }) {
     const [categories, setCategories] = useState([]);
     const [newCategoryName, setNewCategoryName] = useState("");
+    const [categoryError, setCategoryError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+    const [isErrorOpen, setIsErrorOpen] = useState(false);
 
     useEffect(() => {
-        const loadCategories = async () => {
-            const data = await fetchData.getCategories();
-            if (data) setCategories(data);
-        };
+        let isMounted = true;
         if (isOpen) {
-            loadCategories();
-            setNewCategoryName("");
+            fetchData.getCategories().then(data => {
+                if (isMounted && data) setCategories(data);
+            });
         }
+        return () => { isMounted = false; };
     }, [isOpen]);
+
+    const handleClose = () => {
+        setNewCategoryName("");
+        setCategoryError("");
+        setErrorMessage("");
+        setIsErrorOpen(false);
+        onClose();
+    };
 
     if (!isOpen) return null;
 
     const handleAdd = async () => {
-        if (!newCategoryName.trim()) return;
+        const check = validateCategoryName(newCategoryName, categories);
+        if (!check.isValid) {
+            setCategoryError(check.error);
+            return;
+        }
+        setCategoryError("");
         setIsLoading(true);
-        const result = await fetchData.addCategory(newCategoryName);
+        const result = await fetchData.addCategory(check.value);
         if (result.success) {
             setNewCategoryName('');
             const updatedCats = await fetchData.getCategories();
             setCategories(updatedCats || []);
             onCategoriesUpdated(updatedCats || []);
+        } else {
+            const err = result.error || "Failed to add category.";
+            setCategoryError(err);
+            setErrorMessage(err);
+            setIsErrorOpen(true);
         }
         setIsLoading(false);
     };
 
     const handleDelete = async (id) => {
-        const result = await fetchData.deleteCategory(id);
+        const idCheck = validateUuid(id, 'Category ID');
+        if (!idCheck.isValid) {
+            setErrorMessage(idCheck.error);
+            setIsErrorOpen(true);
+            return;
+        }
+        const result = await fetchData.deleteCategory(idCheck.value);
         if (result.success) {
             const updatedCats = await fetchData.getCategories();
             setCategories(updatedCats || []);
             onCategoriesUpdated(updatedCats || []);
+        } else {
+            setErrorMessage(result.error || "Failed to delete category.");
+            setIsErrorOpen(true);
         }
     };
 
     return (
         <div className="fixed inset-0 z-50 flex justify-end overflow-hidden bg-slate-900/40 backdrop-blur-sm">
-            <div className="absolute inset-0" onClick={onClose} />
+            <div className="absolute inset-0" onClick={handleClose} />
             
             <div className="relative w-full max-w-md bg-white shadow-2xl h-full flex flex-col animate-in slide-in-from-right duration-300">
 
@@ -75,9 +106,13 @@ function ManageCategories({ isOpen, onClose, onCategoriesUpdated }) {
                             <input
                                 type="text"
                                 placeholder="e.g. IT Room"
+                                maxLength={50}
                                 value={newCategoryName}
                                 className="flex-1 rounded-xl border border-slate-200 bg-white p-3 text-slate-800 shadow-sm focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all outline-none"
-                                onChange={(e) => setNewCategoryName(e.target.value)}
+                                onChange={(e) => {
+                                    setNewCategoryName(e.target.value);
+                                    if (categoryError) setCategoryError("");
+                                }}
                                 onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
                             />
                             <button
@@ -88,6 +123,11 @@ function ManageCategories({ isOpen, onClose, onCategoriesUpdated }) {
                                 <Plus size={20} />
                             </button>
                         </div>
+                        {categoryError && (
+                            <p className="text-xs font-semibold text-red-600 flex items-center gap-1 mt-1">
+                                <AlertCircle size={14} /> {categoryError}
+                            </p>
+                        )}
                     </div>
 
                     {/* Existing Categories List */}
@@ -129,7 +169,7 @@ function ManageCategories({ isOpen, onClose, onCategoriesUpdated }) {
                 {/* Footer - Matches Edit Room Style */}
                 <div className="border-t border-slate-100 p-6 bg-slate-50">
                     <button
-                        onClick={onClose} // Or whatever function closes this modal
+                        onClick={handleClose}
                         className="w-full rounded-xl bg-blue-600 p-4 font-black text-white shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all"
                     >
                         Done
@@ -137,6 +177,12 @@ function ManageCategories({ isOpen, onClose, onCategoriesUpdated }) {
                 </div>
 
             </div>
+
+            <ErrorPopup
+                isOpen={isErrorOpen}
+                message={errorMessage}
+                onClose={() => setIsErrorOpen(false)}
+            />
         </div>
     );
 }

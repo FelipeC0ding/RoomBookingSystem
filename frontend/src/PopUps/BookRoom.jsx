@@ -2,6 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDown, Repeat, Minus, Plus, CheckCircle2, AlertCircle, X, BookOpen, AlignLeft } from 'lucide-react';
 import fetchData from '../DAL/FetchData';
 import ErrorPopup from './ErrorPopUp';
+import {
+  validateBookingTitle,
+  validateBookingDescription,
+  validateRecurrenceLength,
+  validateRecurrenceFrequency,
+  validateId,
+  validateDate,
+  validateTimeDuration
+} from '../lib/validation';
 
 const INPUT_STYLE = `
   w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200
@@ -13,15 +22,13 @@ const INPUT_STYLE = `
 const LABEL_STYLE = "text-[13px] font-bold text-gray-500 ml-1 uppercase tracking-wider";
 
 function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", roomID, timeDuration, bookingDate }) {
-  if (!isOpen) return null;
-
   const isSuccess = type === 'success';
   const [description, setDescription] = useState('');
   const [bookingTitle, setTitle] = useState('');
   const [isRecurring, setIsRecurring] = useState(false);
   const [frequency, setFrequency] = useState('');
   const [recurrenceLength, setRecurrenceLength] = useState(4); 
-  const [monthlyType, setMonthlyType] = useState('date'); 
+  const [monthlyType, setMonthlyType] = useState('fixed'); 
   const [monthlyOrdinal, setMonthlyOrdinal] = useState(1);
   const [monthlyWeekday, setMonthlyWeekday] = useState(1);
   
@@ -41,14 +48,18 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", ro
   const weekdays = {0:'Sunday', 1:'Monday', 2:'Tuesday', 3:'Wednesday', 4:'Thursday', 5:'Friday', 6:'Saturday'};
   
   useEffect(() => {
-    const dateObj = new Date(bookingDate);
-    const dayIndex = dateObj.getDay(); 
-    const dayOfMonth = dateObj.getDate();
-    const weekNum = Math.ceil(dayOfMonth / 7);
+    if (bookingDate) {
+      const dateObj = new Date(bookingDate);
+      const dayIndex = dateObj.getDay(); 
+      const dayOfMonth = dateObj.getDate();
+      const weekNum = Math.ceil(dayOfMonth / 7);
 
-    setMonthlyWeekday(dayIndex);
-    setMonthlyOrdinal(weekNum > 4 ? 4 : weekNum); 
+      setMonthlyWeekday(dayIndex);
+      setMonthlyOrdinal(weekNum > 4 ? 4 : weekNum); 
+    }
   }, [bookingDate]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
@@ -57,7 +68,7 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", ro
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <h3 className="text-2xl font-extrabold text-gray-900 tracking-tight">
-            Make a booking
+            {title}
           </h3>
           <button
             onClick={() => onClose()}
@@ -79,6 +90,8 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", ro
                 type="text"
                 placeholder="e.g. Year 8 Maths"
                 required
+                maxLength={100}
+                value={bookingTitle}
                 className={INPUT_STYLE}
                 onChange={(e) => setTitle(e.target.value)}
               />
@@ -94,7 +107,8 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", ro
               <input
                 type="text"
                 placeholder="e.g. End of unit assessment"
-                required
+                maxLength={500}
+                value={description}
                 className={INPUT_STYLE}
                 onChange={(e) => setDescription(e.target.value)}
               />
@@ -234,7 +248,7 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", ro
                 )}
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Occurrences</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Occurrences (1-52)</label>
                   <div className="flex items-center gap-4 bg-white p-2 rounded-2xl border border-slate-100">
                     <input 
                       type="number"
@@ -242,6 +256,8 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", ro
                       onChange={(e) => setRecurrenceLength(e.target.value)}
                       className="flex-1 text-center font-black text-base text-slate-800 focus:outline-none"
                       min="1"
+                      max="52"
+                      step="1"
                     />
                   </div>
                 </div>
@@ -253,14 +269,64 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", ro
         <div className="space-y-3">
           <button
             onClick={async () => {
+              // 1. Data Validation
+              const idCheck = validateId(roomID, 'Room ID');
+              if (!idCheck.isValid) {
+                setErrorPopup(true);
+                setErrorMessage(idCheck.error);
+                return;
+              }
+
+              const dateCheck = validateDate(bookingDate, 'Booking date');
+              if (!dateCheck.isValid) {
+                setErrorPopup(true);
+                setErrorMessage(dateCheck.error);
+                return;
+              }
+
+              const durationCheck = validateTimeDuration(timeDuration);
+              if (!durationCheck.isValid) {
+                setErrorPopup(true);
+                setErrorMessage(durationCheck.error);
+                return;
+              }
+
+              const titleCheck = validateBookingTitle(bookingTitle);
+              if (!titleCheck.isValid) {
+                setErrorPopup(true);
+                setErrorMessage(titleCheck.error);
+                return;
+              }
+
+              const descCheck = validateBookingDescription(description);
+              if (!descCheck.isValid) {
+                setErrorPopup(true);
+                setErrorMessage(descCheck.error);
+                return;
+              }
+
               let booked = true;
               
               if (isRecurring) {
+                const freqCheck = validateRecurrenceFrequency(frequency, true);
+                if (!freqCheck.isValid) {
+                  setErrorPopup(true);
+                  setErrorMessage(freqCheck.error);
+                  return;
+                }
+
+                const recCheck = validateRecurrenceLength(recurrenceLength);
+                if (!recCheck.isValid) {
+                  setErrorPopup(true);
+                  setErrorMessage(recCheck.error);
+                  return;
+                }
+
                 // Pass skipWeekends to the Monthly function
                 if (frequency === 'Monthly') {
                   booked = await fetchData.createMonthlyRecurringBooking(
-                    description, roomID, bookingDate, timeDuration, bookingTitle, 
-                    frequency, recurrenceLength, monthlyOrdinal, monthlyWeekday, monthlyType, skipWeekends
+                    descCheck.value, roomID, bookingDate, timeDuration, titleCheck.value, 
+                    freqCheck.value, recCheck.value, monthlyOrdinal, monthlyWeekday, monthlyType, skipWeekends
                   );
                   console.log("Booking Result:", booked);
                   if (!booked.isValid) {
@@ -272,12 +338,10 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", ro
                 } else {
                   // Pass skipWeekends to the standard recurring function
                   booked = await fetchData.createRecurringBooking(
-                    description, roomID, bookingDate, timeDuration, bookingTitle, 
-                    frequency, recurrenceLength, skipWeekends
+                    descCheck.value, roomID, bookingDate, timeDuration, titleCheck.value, 
+                    freqCheck.value, recCheck.value, skipWeekends
                   );
                   console.log("Booking Result:", booked);
-                  // FIXED: createRecurringBooking resolves to { isValid, error }, not a plain
-                  // boolean — the old `!booked` check could never be true for an object.
                   if (!booked || !booked.isValid) {
                     setErrorPopup(true);
                     setErrorMessage(`Booking could not be created. ${booked?.error || 'Have any of these dates already been booked?'}`);
@@ -288,12 +352,9 @@ function PopUp({ isOpen, onClose, type = 'success', title = "Make a booking", ro
               } else {
 
                 // --- SINGLE BOOKING LOGIC ---
-                const result = await fetchData.createBooking(description, roomID, bookingDate, timeDuration, bookingTitle);
+                const result = await fetchData.createBooking(descCheck.value, roomID, bookingDate, timeDuration, titleCheck.value);
                 console.log("Booking Result:", result);
 
-                // FIXED: createBooking resolves to { isValid, error } via executeSecureBooking,
-                // never a `.success` key — the old check (`result.success === false`) could
-                // never be true, so failed bookings silently closed with no error shown.
                 if (!result || !result.isValid) {
                     setErrorPopup(true);
                     setErrorMessage(`Booking could not be created. ${result?.error || 'Please try again.'}`);

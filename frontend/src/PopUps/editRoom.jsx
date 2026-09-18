@@ -1,49 +1,74 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Users, Info, Trash2, MapPin, DoorOpen, List, Tag } from 'lucide-react';
 import fetchData from '../DAL/FetchData'; 
+import ErrorPopup from './ErrorPopUp';
+import {
+    validateRoomName,
+    validateRoomLocation,
+    validateRoomCapacity,
+    validateRoomFeatures,
+    validateId,
+    validateUuid
+} from '../lib/validation';
+
+function getRoomFormData(r) {
+    return {
+        id: r?.RoomID ?? r?.room_id ?? r?.id,
+        name: r?.RoomName ?? r?.room_name ?? r?.name ?? "",
+        location: r?.Location ?? r?.location ?? "",
+        capacity: r?.Capacity ?? r?.capacity ?? 0,
+        features: r?.Features ?? r?.features ?? "",
+        category_ids: Array.isArray(r?.category_ids)
+            ? [...r.category_ids]
+            : Array.isArray(r?.categoryIds)
+            ? [...r.categoryIds]
+            : []
+    };
+}
 
 function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
     const [categories, setCategories] = useState([]);
-    const [formData, setFormData] = useState({
-        name: "",
-        location: "",
-        capacity: 0,
-        features: "",
-        category_ids: [] 
-    });
-    
+    const [errorMessage, setErrorMessage] = useState('');
+    const [isErrorOpen, setIsErrorOpen] = useState(false);
+    const [formData, setFormData] = useState(() => getRoomFormData(room));
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+
+    // Sync formData whenever room or isOpen changes
+    useEffect(() => {
+        if (room && isOpen) {
+            setFormData(getRoomFormData(room));
+            setIsConfirmingDelete(false);
+            setErrorMessage('');
+            setIsErrorOpen(false);
+        }
+    }, [room, isOpen]);
 
     // Use FetchDAL to securely get categories
     useEffect(() => {
-        const loadCategories = async () => {
-            const data = await fetchData.getCategories();
-            if (data) setCategories(data);
-        };
-        if (isOpen) loadCategories();
-    }, [isOpen]);
-
-    useEffect(() => {
-        if (room) {
-            setFormData({
-                id: room.RoomID,
-                name: room.RoomName || "",
-                location: room.Location || "",
-                capacity: room.Capacity || 0,
-                features: room.Features || "",
-                category_ids: room.category_ids || [] 
+        let isMounted = true;
+        if (isOpen) {
+            fetchData.getCategories().then(data => {
+                if (isMounted && data) setCategories(data);
             });
         }
+        return () => { isMounted = false; };
+    }, [isOpen]);
+
+    const handleClose = () => {
         setIsConfirmingDelete(false);
-    }, [room, isOpen]);
+        setErrorMessage('');
+        setIsErrorOpen(false);
+        onClose();
+    };
 
     if (!isOpen) return null;
 
     const toggleCategory = (categoryId) => {
         setFormData(prev => {
             const currentIds = prev.category_ids || [];
-            if (currentIds.includes(categoryId)) {
-                return { ...prev, category_ids: currentIds.filter(id => id !== categoryId) };
+            const exists = currentIds.some(id => String(id) === String(categoryId));
+            if (exists) {
+                return { ...prev, category_ids: currentIds.filter(id => String(id) !== String(categoryId)) };
             } else {
                 return { ...prev, category_ids: [...currentIds, categoryId] };
             }
@@ -52,7 +77,7 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
 
     return (
         <div className="fixed inset-0 z-50 flex justify-end overflow-hidden bg-slate-900/40 backdrop-blur-sm">
-            <div className="absolute inset-0" onClick={onClose} />
+            <div className="absolute inset-0" onClick={handleClose} />
             <div className="relative w-full max-w-md bg-white shadow-2xl h-full flex flex-col animate-in slide-in-from-right duration-300">
                 
                 <div className="px-6 py-5 border-b border-slate-200 bg-white">
@@ -61,7 +86,7 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
                             <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Edit Room</h2>
                         </div>
                         <button 
-                            onClick={onClose} 
+                            onClick={handleClose} 
                             className="rounded-xl p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                         >
                             <X size={20} />
@@ -76,6 +101,7 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
                         </label>
                         <input
                             type="text"
+                            maxLength={100}
                             value={formData.name}
                             onChange={(e) => setFormData({...formData, name: e.target.value})}
                             className="w-full rounded-xl border border-slate-200 bg-white p-3 text-slate-800 shadow-sm focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all outline-none"
@@ -88,6 +114,7 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
                         </label>
                         <input
                             type="text"
+                            maxLength={100}
                             value={formData.location}
                             onChange={(e) => setFormData({...formData, location: e.target.value})}
                             className="w-full rounded-xl border border-slate-200 bg-white p-3 text-slate-800 shadow-sm focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all outline-none"
@@ -105,11 +132,11 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
                                 </span>
                             ) : (
                                 categories.map(cat => {
-                                    const isSelected = formData.category_ids.includes(cat.id);
+                                    const isSelected = (formData.category_ids || []).some(id => String(id) === String(cat.id));
                                     return (
                                         <button
                                             key={cat.id}
-                                            type="button"
+                                            type="button" 
                                             onClick={(e) => {
                                                 e.preventDefault();
                                                 toggleCategory(cat.id);
@@ -130,10 +157,13 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
 
                     <div className="space-y-1.5">
                         <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                            <Users size={16} className="text-slate-400" /> Room Capacity
+                            <Users size={16} className="text-slate-400" /> Room Capacity (1-1000)
                         </label>
                         <input
                             type="number"
+                            min="1"
+                            max="1000"
+                            step="1"
                             value={formData.capacity}
                             onChange={(e) => setFormData({...formData, capacity: e.target.value})}
                             className="w-full rounded-xl border border-slate-200 bg-white p-3 text-slate-800 shadow-sm focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all outline-none"
@@ -146,6 +176,7 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
                         </label>
                         <textarea
                             value={formData.features}
+                            maxLength={500}
                             onChange={(e) => setFormData({...formData, features: e.target.value})}
                             rows="3"
                             className="w-full rounded-xl border border-slate-200 bg-white p-3 text-slate-800 shadow-sm focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all outline-none resize-none"
@@ -172,14 +203,75 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
                             </button>
                             
                             <button
-                                onClick={onClose}
+                                onClick={handleClose}
                                 className="flex-[2] rounded-xl bg-white border border-slate-200 p-3.5 font-semibold text-slate-600 hover:bg-slate-50 transition-all"
                             >
                                 Cancel
                             </button>
 
                             <button
-                                onClick={() => onSave(room.RoomID, formData)}
+                                onClick={async () => {
+                                    const roomId = room?.RoomID ?? room?.id ?? formData.id;
+                                    const idCheck = validateId(roomId, 'Room ID');
+                                    if (!idCheck.isValid) {
+                                        setErrorMessage(idCheck.error);
+                                        setIsErrorOpen(true);
+                                        return;
+                                    }
+
+                                    const nameCheck = validateRoomName(formData.name);
+                                    if (!nameCheck.isValid) {
+                                        setErrorMessage(nameCheck.error);
+                                        setIsErrorOpen(true);
+                                        return;
+                                    }
+
+                                    const locationCheck = validateRoomLocation(formData.location);
+                                    if (!locationCheck.isValid) {
+                                        setErrorMessage(locationCheck.error);
+                                        setIsErrorOpen(true);
+                                        return;
+                                    }
+
+                                    const capacityCheck = validateRoomCapacity(formData.capacity);
+                                    if (!capacityCheck.isValid) {
+                                        setErrorMessage(capacityCheck.error);
+                                        setIsErrorOpen(true);
+                                        return;
+                                    }
+
+                                    const featuresCheck = validateRoomFeatures(formData.features);
+                                    if (!featuresCheck.isValid) {
+                                        setErrorMessage(featuresCheck.error);
+                                        setIsErrorOpen(true);
+                                        return;
+                                    }
+
+                                    const cleanCategoryIds = [];
+                                    if (Array.isArray(formData.category_ids)) {
+                                        for (const catId of formData.category_ids) {
+                                            const cCheck = validateUuid(catId, 'Category ID');
+                                            if (!cCheck.isValid) {
+                                                setErrorMessage(cCheck.error);
+                                                setIsErrorOpen(true);
+                                                return;
+                                            }
+                                            cleanCategoryIds.push(cCheck.value);
+                                        }
+                                    }
+
+                                    const res = await onSave(idCheck.value, {
+                                        name: nameCheck.value,
+                                        location: locationCheck.value,
+                                        capacity: capacityCheck.value,
+                                        features: featuresCheck.value,
+                                        category_ids: cleanCategoryIds
+                                    });
+                                    if (res && !res.success) {
+                                        setErrorMessage(res.error || 'Failed to save room changes.');
+                                        setIsErrorOpen(true);
+                                    }
+                                }}
                                 className="flex-[3] rounded-xl bg-slate-900 p-3.5 font-semibold text-white shadow-sm hover:bg-slate-800 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                             >
                                 <Save size={18} /> Save Changes
@@ -188,7 +280,20 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
                     ) : (
                         <div className="flex gap-3 animate-in fade-in slide-in-from-bottom-2">
                             <button
-                                onClick={() => onDelete(room.RoomID)}
+                                onClick={async () => {
+                                    const roomId = room?.RoomID ?? room?.id ?? formData.id;
+                                    const idCheck = validateId(roomId, 'Room ID');
+                                    if (!idCheck.isValid) {
+                                        setErrorMessage(idCheck.error);
+                                        setIsErrorOpen(true);
+                                        return;
+                                    }
+                                    const res = await onDelete(idCheck.value);
+                                    if (res && !res.success) {
+                                        setErrorMessage(res.error || 'Failed to delete room.');
+                                        setIsErrorOpen(true);
+                                    }
+                                }}
                                 className="flex-[3] rounded-xl bg-red-600 p-3.5 font-semibold text-white shadow-sm hover:bg-red-700 transition-all flex items-center justify-center gap-2"
                             >
                                 <Trash2 size={18} /> Confirm Delete
@@ -204,6 +309,12 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
                 </div>
                 
             </div>
+
+            <ErrorPopup
+                isOpen={isErrorOpen}
+                message={errorMessage}
+                onClose={() => setIsErrorOpen(false)}
+            />
         </div>
     );
 }

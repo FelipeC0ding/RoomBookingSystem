@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Settings, LogOut, Filter, Calendar } from 'lucide-react';
+import { User, Settings, LogOut, Filter, Calendar, Clock, RefreshCw, Mail } from 'lucide-react';
 import AdminPage from './Admin.jsx';
 import fetchData from './DAL/FetchData.js';
 import timeCalcs from './calculations/TimeCalcs.js';
@@ -9,6 +9,7 @@ import ErrorPopUp from './PopUps/ErrorPopUp.jsx';
 import ProfilePage from './profile.jsx';
 import { supabase } from './supabaseClient';
 import { getUserColour } from './colourUtils';
+import { validateSearchTerm, validateDate } from './lib/validation.js';
 
 function Menu(props) {
     const [rooms, setRooms] = useState([]);
@@ -269,7 +270,13 @@ function Menu(props) {
                         <input
                             type="text"
                             value={props.roomFilter}
-                            onChange={(e) => props.setRoomFilter(e.target.value)}
+                            maxLength={100}
+                            onChange={(e) => {
+                                const val = validateSearchTerm(e.target.value, 100);
+                                if (val.isValid) {
+                                    props.setRoomFilter(val.value);
+                                }
+                            }}
                             className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-blue-500/20"
                             placeholder="Find Room"
                         />
@@ -303,7 +310,12 @@ function Menu(props) {
                         <input
                             type="date"
                             value={props.viewDate}
-                            onChange={(e) => props.setViewDate(e.target.value)}
+                            onChange={(e) => {
+                                const val = validateDate(e.target.value, 'View date');
+                                if (val.isValid) {
+                                    props.setViewDate(e.target.value);
+                                }
+                            }}
                             className="bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-2 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 w-[160px]" 
                         />
                     </div>
@@ -455,6 +467,73 @@ function Menu(props) {
     );
 }
 
+function PendingApprovalScreen({ userProfile, onRefresh, onLogout }) {
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [statusToast, setStatusToast] = useState('');
+
+    const handleCheckStatus = async () => {
+        setIsRefreshing(true);
+        setStatusToast('');
+        await onRefresh();
+        setIsRefreshing(false);
+        setStatusToast('Account is still pending approval by an administrator.');
+        setTimeout(() => setStatusToast(''), 4500);
+    };
+
+    return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans select-none">
+            <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 border border-slate-100 text-center animate-in fade-in zoom-in duration-300">
+                <div className="inline-block px-3.5 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-black uppercase tracking-wider mb-4 mt-2">
+                    Account Pending Verification
+                </div>
+
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight mb-2">
+                    Welcome, {userProfile?.Firstname || 'User'}!
+                </h1>
+
+                <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                    Your account registration was successful. To maintain workspace security, an administrator must verify your account before you can access the room booking system.
+                </p>
+
+                {userProfile?.UserEmail && (
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-6 flex items-center gap-3 text-left">
+                        <Mail size={18} className="text-slate-400 shrink-0" />
+                        <div className="truncate">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Registered Email</p>
+                            <p className="text-xs font-bold text-slate-700 truncate">{userProfile.UserEmail}</p>
+                        </div>
+                    </div>
+                )}
+
+                {statusToast && (
+                    <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-xs font-bold animate-in fade-in">
+                        {statusToast}
+                    </div>
+                )}
+
+                <div className="space-y-3">
+                    <button
+                        onClick={handleCheckStatus}
+                        disabled={isRefreshing}
+                        className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                    >
+                        <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
+                        {isRefreshing ? 'Checking Status...' : 'Check Approval Status'}
+                    </button>
+
+                    <button
+                        onClick={onLogout}
+                        className="w-full py-3.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-2xl transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
+                    >
+                        <LogOut size={18} />
+                        Sign Out
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function MainScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [isAccessDenied, setIsAccessDenied] = useState(false);
@@ -467,12 +546,27 @@ function MainScreen() {
     const [viewType, setViewType] = useState('day');
     const [activePage, setActivePage] = useState('menu'); 
     const [timePeriods, setTimePeriods] = useState([]);
+    const [userProfile, setUserProfile] = useState(null);
     const [userRole, setUserRole] = useState('');
     const [userConfirmed, setUserConfirmed] = useState(false);
     const [showError, setShowError] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     
     const navigate = useNavigate(); 
+
+    const checkApprovalStatus = async () => {
+        try {
+            const { data } = await supabase.rpc('get_my_profile');
+            const profile = data && data.length > 0 ? data[0] : null;
+            if (profile) {
+                setUserProfile(profile);
+                setUserRole(profile.Role ? profile.Role.toUpperCase() : 'STANDARD');
+                setUserConfirmed(Boolean(profile.Confirmed));
+            }
+        } catch (e) {
+            console.error("Status refresh error:", e);
+        }
+    };
 
     useEffect(() => {
         async function loadInitialData() {
@@ -495,8 +589,9 @@ function MainScreen() {
                     return; 
                 }
 
+                setUserProfile(profile);
                 setUserRole(profile.Role ? profile.Role.toUpperCase() : 'STANDARD');
-                setUserConfirmed(profile.Confirmed);
+                setUserConfirmed(Boolean(profile.Confirmed));
 
                 const times = await timeCalcs.getTimeHeaders();
                 setTimePeriods(times);
@@ -557,6 +652,16 @@ function MainScreen() {
                     }}
                 />
             </div>
+        );
+    }
+
+    if (!userConfirmed) {
+        return (
+            <PendingApprovalScreen
+                userProfile={userProfile}
+                onRefresh={checkApprovalStatus}
+                onLogout={handleLogout}
+            />
         );
     }
 

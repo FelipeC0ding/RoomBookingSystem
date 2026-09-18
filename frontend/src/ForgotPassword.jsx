@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from './supabaseClient'; // Adjust path if necessary
 import { Mail, ArrowLeft } from 'lucide-react';
+import { validateEmail } from './lib/validation';
 
 export default function ForgotPassword() {
     const [email, setEmail] = useState('');
@@ -10,10 +11,17 @@ export default function ForgotPassword() {
 
     const handleReset = async (e) => {
         e.preventDefault();
+        
+        const emailCheck = validateEmail(email);
+        if (!emailCheck.isValid) {
+            setStatus({ type: 'error', message: emailCheck.error });
+            return;
+        }
+
         setLoading(true);
         setStatus({ type: '', message: '' });
 
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        const { error } = await supabase.auth.resetPasswordForEmail(emailCheck.value, {
             redirectTo: `${window.location.origin}/update-password`,
         });
 
@@ -41,6 +49,7 @@ export default function ForgotPassword() {
                             <input
                                 type="email"
                                 placeholder="you@example.com"
+                                maxLength={254}
                                 className="bg-transparent outline-none w-full text-sm text-black"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}

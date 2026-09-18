@@ -1,6 +1,6 @@
 import React from 'react';
 
-const ErrorPopup = ({ message, isOpen, onClose }) => {
+const ErrorPopup = ({ title = "Something went wrong", message, isOpen, onClose }) => {
   if (!isOpen) return null;
 
 
@@ -17,8 +17,8 @@ const ErrorPopup = ({ message, isOpen, onClose }) => {
 
 
         <div className="flex flex-col gap-2">
-          <h3 className="text-lg font-bold text-red-600">Something went wrong</h3>
-          <p className="text-gray-700">{message}</p>
+          <h3 className="text-lg font-bold text-red-600">{title}</h3>
+          <p className="text-gray-700 whitespace-pre-line">{message}</p>
           
           <button 
             onClick={onClose}

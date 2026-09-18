@@ -1,6 +1,13 @@
-import React,{ useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle2, AlertCircle, X, BookOpen, AlignLeft } from 'lucide-react';
-import fetchData from '../DAL/FetchData'
+import fetchData from '../DAL/FetchData';
+import ErrorPopup from './ErrorPopUp';
+import {
+  validateBookingTitle,
+  validateBookingDescription,
+  validateId
+} from '../lib/validation';
+
 const INPUT_STYLE = `
   w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200
   rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500
@@ -10,18 +17,23 @@ const INPUT_STYLE = `
 
 const LABEL_STYLE = "text-[13px] font-bold text-gray-500 ml-1 uppercase tracking-wider";
 
-function PopUp({ isOpen, onClose, type = 'success', title, BookingID, timeDuration, bookingDate,description}) {
-  if (!isOpen) return null;
-
+function PopUp({ isOpen, onClose, type = 'success', title = '', BookingID, description = '' }) {
   const isSuccess = type === 'success';
-  const [stateDescription, setDescription] = useState(description)
-  const [bookingTitle, setTitle] = useState(title)
+  const [stateDescription, setDescription] = useState(description);
+  const [bookingTitle, setTitle] = useState(title);
+  const [errorPopUp, setErrorPopup] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
   useEffect(() => {
-      if (isOpen) {
-        setDescription(description || '');
-        setTitle(title || '');
-      }
-    }, [description, title, isOpen]);
+    if (isOpen) {
+      setTitle(title || '');
+      setDescription(description || '');
+      setErrorPopup(false);
+      setErrorMessage('');
+    }
+  }, [isOpen, title, description]);
+
+  if (!isOpen) return null;
 
 
   return (
@@ -52,10 +64,10 @@ function PopUp({ isOpen, onClose, type = 'success', title, BookingID, timeDurati
               <input
                 type="text"
                 required
+                maxLength={100}
                 className={INPUT_STYLE}
                 value={bookingTitle}
                 onChange={(e) => setTitle(e.target.value)}
-
               />
             </div>
           </div>
@@ -68,8 +80,8 @@ function PopUp({ isOpen, onClose, type = 'success', title, BookingID, timeDurati
               </div>
               <input
                 type="text"
-                required
-                value = {stateDescription}
+                maxLength={500}
+                value={stateDescription}
                 className={INPUT_STYLE}
                 onChange={(e) => setDescription(e.target.value)}
               />
@@ -80,7 +92,31 @@ function PopUp({ isOpen, onClose, type = 'success', title, BookingID, timeDurati
         {/* Actions */}
         <div className="space-y-3">
           <button
-            onClick={async ()=>{await fetchData.updateBooking(BookingID, bookingTitle , stateDescription);onClose();}}
+            onClick={async () => {
+              const titleCheck = validateBookingTitle(bookingTitle);
+              if (!titleCheck.isValid) {
+                setErrorMessage(titleCheck.error);
+                setErrorPopup(true);
+                return;
+              }
+
+              const descCheck = validateBookingDescription(stateDescription);
+              if (!descCheck.isValid) {
+                setErrorMessage(descCheck.error);
+                setErrorPopup(true);
+                return;
+              }
+
+              const idCheck = validateId(BookingID, 'Booking ID');
+              if (!idCheck.isValid) {
+                setErrorMessage(idCheck.error);
+                setErrorPopup(true);
+                return;
+              }
+
+              await fetchData.updateBooking(idCheck.value, titleCheck.value, descCheck.value);
+              onClose();
+            }}
             className={`w-full py-4 px-6 font-bold rounded-2xl transition-all shadow-lg shadow-blue-200 active:scale-[0.98] ${
               isSuccess ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700'
             } text-white text-lg`}
@@ -89,7 +125,16 @@ function PopUp({ isOpen, onClose, type = 'success', title, BookingID, timeDurati
           </button>
 
           <button
-              onClick={async ()=> {await fetchData.deleteBooking(BookingID); onClose();}}
+              onClick={async () => {
+                const idCheck = validateId(BookingID, 'Booking ID');
+                if (!idCheck.isValid) {
+                  setErrorMessage(idCheck.error);
+                  setErrorPopup(true);
+                  return;
+                }
+                await fetchData.deleteBooking(idCheck.value);
+                onClose();
+              }}
               className="w-full py-3 px-4 rounded-2xl bg-red-600 text-white font-bold transition-all duration-200 hover:bg-red-700 hover:shadow-lg active:scale-[0.98]"
             >
             Delete
@@ -102,6 +147,12 @@ function PopUp({ isOpen, onClose, type = 'success', title, BookingID, timeDurati
           </button>
         </div>
       </div>
+
+      <ErrorPopup 
+        isOpen={errorPopUp} 
+        message={errorMessage} 
+        onClose={() => setErrorPopup(false)} 
+      />
     </div>
   );
 }

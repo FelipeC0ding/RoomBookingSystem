@@ -1,11 +1,12 @@
 import React from 'react';
 import { Mail, Lock, LogIn, ShieldCheck, UserPlus, ArrowRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import { Link } from 'react-router-dom';
 import FetchData from './DAL/FetchData';
 import ErrorPopUp from './PopUps/ErrorPopUp.jsx';
+import { validateEmail } from './lib/validation';
 
 const INPUT_CONTAINER = "relative mb-1 w-full";
 const ICON_STYLE = "absolute left-3 top-1/2 -translate-y-1/2 text-gray-400";
@@ -23,7 +24,6 @@ function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
-
     const [popupConfig, setPopupConfig] = useState({
         isOpen: false,
         type: 'error',
@@ -32,11 +32,43 @@ function LoginPage() {
     });
     const handleLogin = async (e) => {
         e.preventDefault();
+
+        const emailCheck = validateEmail(email);
+        if (!emailCheck.isValid) {
+            setPopupConfig({
+                isOpen: true,
+                type: 'error',
+                title: 'Invalid Email',
+                message: emailCheck.error
+            });
+            return;
+        }
+
+        if (!password || typeof password !== 'string') {
+            setPopupConfig({
+                isOpen: true,
+                type: 'error',
+                title: 'Password Required',
+                message: 'Please enter your password.'
+            });
+            return;
+        }
+
+        if (password.length > 128) {
+            setPopupConfig({
+                isOpen: true,
+                type: 'error',
+                title: 'Invalid Password',
+                message: 'Password cannot exceed 128 characters.'
+            });
+            return;
+        }
+
         setIsLoading(true);
 
         try {
             const { data, error: networkError } = await supabase.functions.invoke('login', {
-                body: { email, password }
+                body: { email: emailCheck.value, password }
             });
 
             // 1. Catch absolute network failures (e.g., no internet)
@@ -112,6 +144,7 @@ function LoginPage() {
                                 <input
                                     type="email"
                                     placeholder="you@school.edu"
+                                    maxLength={254}
                                     className={INPUT_STYLE}
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
@@ -139,6 +172,7 @@ function LoginPage() {
                                 <input
                                     type="password"
                                     placeholder="••••••••"
+                                    maxLength={128}
                                     className={INPUT_STYLE}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}

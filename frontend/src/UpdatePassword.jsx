@@ -2,15 +2,29 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from './supabaseClient'; // Adjust path if necessary
 import { Lock } from 'lucide-react';
+import { validatePassword } from './lib/validation';
 
 export default function UpdatePassword() {
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [status, setStatus] = useState({ type: '', message: '' });
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
     const handleUpdate = async (e) => {
         e.preventDefault();
+
+        const pwCheck = validatePassword(password);
+        if (!pwCheck.isValid) {
+            setStatus({ type: 'error', message: pwCheck.error });
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            setStatus({ type: 'error', message: 'Passwords must match.' });
+            return;
+        }
+
         setLoading(true);
         setStatus({ type: '', message: '' });
 
@@ -47,9 +61,27 @@ export default function UpdatePassword() {
                             <input
                                 type="password"
                                 placeholder="••••••••"
+                                maxLength={100}
                                 className="bg-transparent outline-none w-full text-sm text-black"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <p className="text-[11px] text-gray-500 mt-1">Requires: 8+ chars, uppercase, lowercase, number, special character.</p>
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="text-sm font-semibold text-gray-700 ml-1">Confirm New Password</label>
+                        <div className="flex items-center border rounded-lg bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500 overflow-hidden px-3 py-2">
+                            <Lock size={18} className="text-gray-400 mr-2" />
+                            <input
+                                type="password"
+                                placeholder="••••••••"
+                                maxLength={100}
+                                className="bg-transparent outline-none w-full text-sm text-black"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
                                 required
                             />
                         </div>

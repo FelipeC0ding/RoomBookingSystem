@@ -351,6 +351,11 @@ function ProfilePage({ onGoBack }) {
                                         </h1>
 
                                         <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 w-full">
+                                            {department && (
+                                                <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md">
+                                                    {department}
+                                                </span>
+                                            )}
                                             <span className="flex items-center gap-1.5 text-slate-400 text-xs md:text-sm font-medium">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0" />
                                                 Click a date to view and edit bookings
@@ -380,6 +385,7 @@ function ProfilePage({ onGoBack }) {
 
             {popupConfig.isOpen && (
                 <PopUp
+                    key={popupConfig.BookingID}
                     isOpen={popupConfig.isOpen}
                     type={popupConfig.type}
                     title={popupConfig.title}

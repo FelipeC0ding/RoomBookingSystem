@@ -9,6 +9,7 @@ import {
     Loader2
 } from 'lucide-react';
 import fetchData from './DAL/FetchData';
+import { validateSearchTerm } from './lib/validation.js';
 import EditRoom from './PopUps/editRoom';
 import AddRoom from './PopUps/AddRoom';
 import ManageCategories from './PopUps/ManageCategories';
@@ -79,8 +80,15 @@ function ManageRooms({ onGoBack }) {
                         <input 
                             type="text"
                             placeholder="Search rooms..."
+                            value={searchTerm}
+                            maxLength={100}
                             className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-medium"
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={(e) => {
+                                const val = validateSearchTerm(e.target.value, 100);
+                                if (val.isValid) {
+                                    setSearchTerm(val.value);
+                                }
+                            }}
                             disabled={isLoading}
                         />
                     </div>
@@ -181,8 +189,8 @@ function ManageRooms({ onGoBack }) {
                                                         <button 
                                                             className="flex items-center gap-1 px-3 py-2 bg-slate-100 text-slate-600 rounded-lg font-bold text-xs hover:bg-blue-600 hover:text-white transition-all shadow-sm"
                                                             onClick={() => {
-                                                                setPopUpState(true);
                                                                 setSelectedRoom(room);
+                                                                setPopUpState(true);
                                                             }}
                                                         >
                                                             <Edit2 size={14} />
@@ -219,42 +227,62 @@ function ManageRooms({ onGoBack }) {
                 onCategoriesUpdated={(updatedCats) => setCategories(updatedCats)}
             />
 
-            <EditRoom 
-                room={selectedRoom} 
-                isOpen={popUpOpen} 
-                onClose={() => setPopUpState(false)} 
-                onSave={async(id, updatedData) => {
-                    await fetchData.UpdateRooms(
-                        id,
-                        updatedData.name, 
-                        updatedData.location, 
-                        updatedData.capacity, 
-                        updatedData.features,
-                        updatedData.category_ids
-                    );
-                    setPopUpState(false);
-                    // Silent background refresh
-                    const updatedRooms = await fetchData.getRooms();
-                    setRooms(updatedRooms);
-                }}
-                onDelete={async(roomID) => {
-                    await fetchData.deleteRoom(roomID);
-                    setPopUpState(false);
-                    // Silent background refresh
-                    const updatedRooms = await fetchData.getRooms();
-                    setRooms(updatedRooms);
-                }}
-            />
+            {popUpOpen && selectedRoom && (
+                <EditRoom 
+                    key={selectedRoom.RoomID || selectedRoom.id}
+                    room={selectedRoom} 
+                    isOpen={popUpOpen} 
+                    onClose={() => {
+                        setPopUpState(false);
+                        setSelectedRoom(null);
+                    }} 
+                    onSave={async(id, updatedData) => {
+                        const res = await fetchData.UpdateRooms(
+                            id,
+                            updatedData.name, 
+                            updatedData.location, 
+                            updatedData.capacity, 
+                            updatedData.features,
+                            updatedData.category_ids
+                        );
+                        if (!res || !res.success) {
+                            return res || { success: false, error: 'Failed to update room.' };
+                        }
+                        setPopUpState(false);
+                        setSelectedRoom(null);
+                        // Silent background refresh
+                        const updatedRooms = await fetchData.getRooms();
+                        setRooms(updatedRooms || []);
+                        return { success: true };
+                    }}
+                    onDelete={async(roomID) => {
+                        const res = await fetchData.deleteRoom(roomID);
+                        if (!res || !res.success) {
+                            return res || { success: false, error: 'Failed to delete room.' };
+                        }
+                        setPopUpState(false);
+                        setSelectedRoom(null);
+                        // Silent background refresh
+                        const updatedRooms = await fetchData.getRooms();
+                        setRooms(updatedRooms || []);
+                        return { success: true };
+                    }}
+                />
+            )}
 
             <AddRoom 
                 isOpen={addNewRoomState} 
                 onClose={() => setAddRoom(false)} 
                 onAdd={async(title, location, capacity, features, categoryIds) => {
-                    await fetchData.AddNewRoom(title, location, capacity, features, categoryIds);
+                    const res = await fetchData.AddNewRoom(title, location, capacity, features, categoryIds);
+                    if (!res || !res.success) {
+                        return res || { success: false, error: 'Failed to add room.' };
+                    }
                     setAddRoom(false);
                     // Silent background refresh
                     const updatedRooms = await fetchData.getRooms();
-                    setRooms(updatedRooms);
+                    setRooms(updatedRooms || []);
+                    return { success: true };
                 }}
             />
         </div>

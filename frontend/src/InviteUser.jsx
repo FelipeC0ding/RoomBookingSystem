@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, FileText, X } from 'lucide-react';
 import ErrorPopup from './PopUps/ErrorPopUp';
+import { validateEmail } from './lib/validation';
 
 export default function InviteUser({ isOpen, onClose, onInviteUser }) {
     const [manualEmail, setManualEmail] = useState('');
@@ -14,10 +15,6 @@ export default function InviteUser({ isOpen, onClose, onInviteUser }) {
     
     const fileInputRef = useRef(null);
 
-    // --- STRICT EMAIL VALIDATION REGEX ---
-    // Only allows standard email characters, inherently blocking XSS/SQL injection scripts
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-
     // If the modal is not open, don't render anything
     if (!isOpen) return null;
 
@@ -30,6 +27,13 @@ export default function InviteUser({ isOpen, onClose, onInviteUser }) {
         const file = e.target.files[0];
         if (!file) return;
         
+        // Security: Check file size (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            showError("Security Alert: File size exceeds the 2MB limit.");
+            handleRemoveFile();
+            return;
+        }
+
         // Security: Check MIME type and extension
         const isValidMimeType = file.type === 'text/csv' || file.type === 'application/vnd.ms-excel';
         const isValidExtension = file.name.toLowerCase().endsWith('.csv');
@@ -45,10 +49,12 @@ export default function InviteUser({ isOpen, onClose, onInviteUser }) {
         const reader = new FileReader();
         reader.onload = (event) => {
             const text = event.target.result;
-            // Parse CSV text and rigidly enforce the strict email regex
+            // Parse CSV text and enforce strict email validation
             const extracted = text
                 .split(/[\s,]+/)
-                .filter(email => emailRegex.test(email)); // <-- Updated security check
+                .map(e => e.trim())
+                .filter(email => validateEmail(email).isValid)
+                .map(email => validateEmail(email).value);
             
             if (extracted.length === 0) {
                 showError("No valid email addresses were found in the uploaded file.");
@@ -76,15 +82,17 @@ export default function InviteUser({ isOpen, onClose, onInviteUser }) {
         if (manualEmail.trim()) {
             const manualExtracted = manualEmail
                 .split(/[\s,]+/)
-                .filter(email => email.trim() !== ''); // Clear out blank spaces
+                .map(e => e.trim())
+                .filter(email => email !== ''); // Clear out blank spaces
 
-            for (const email of manualExtracted) {
-                if (!emailRegex.test(email)) {
-                    showError(`Invalid format detected: "${email}". Please enter a valid email address.`);
+            for (const rawEmail of manualExtracted) {
+                const check = validateEmail(rawEmail);
+                if (!check.isValid) {
+                    showError(check.error);
                     return; // Stop the entire submission if malicious/invalid code is detected
                 }
+                allEmails.push(check.value);
             }
-            allEmails.push(...manualExtracted);
         }
 
         const uniqueEmails = [...new Set(allEmails)];
@@ -96,18 +104,39 @@ export default function InviteUser({ isOpen, onClose, onInviteUser }) {
 
         setIsInviting(true);
 
-        try {
-            for (const email of uniqueEmails) {
-                await onInviteUser(email); 
+        const successes = [];
+        const failures = [];
+
+        for (const email of uniqueEmails) {
+            try {
+                const res = await onInviteUser(email);
+                if (res && res.success) {
+                    successes.push(email);
+                } else {
+                    const errMsg = res?.error || `Failed to send invitation to ${email}.`;
+                    failures.push({ email, error: errMsg });
+                }
+            } catch (err) {
+                failures.push({ email, error: err.message || `Failed to send invitation to ${email}.` });
             }
-        } catch (error) {
-            showError("An error occurred while sending invitations. Please try again.");
         }
 
         setIsInviting(false);
+
+        if (failures.length > 0) {
+            const failureMessages = failures.map(f => f.error).join('\n\n');
+            showError(failureMessages);
+
+            if (successes.length > 0) {
+                setManualEmail('');
+                handleRemoveFile();
+            }
+            return;
+        }
+
         setManualEmail('');
         handleRemoveFile();
-        onClose(); 
+        onClose(true);
     };
 
     return (
@@ -130,6 +159,7 @@ export default function InviteUser({ isOpen, onClose, onInviteUser }) {
                             type="email"
                             className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                             placeholder="e.g. philip@example.com"
+                            maxLength={254}
                             value={manualEmail}
                             onChange={(e) => setManualEmail(e.target.value)}
                         />
