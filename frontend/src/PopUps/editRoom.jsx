@@ -32,6 +32,8 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
     const [isErrorOpen, setIsErrorOpen] = useState(false);
     const [formData, setFormData] = useState(() => getRoomFormData(room));
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Sync formData whenever room or isOpen changes
     useEffect(() => {
@@ -40,6 +42,8 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
             setIsConfirmingDelete(false);
             setErrorMessage('');
             setIsErrorOpen(false);
+            setIsSaving(false);
+            setIsDeleting(false);
         }
     }, [room, isOpen]);
 
@@ -55,6 +59,7 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
     }, [isOpen]);
 
     const handleClose = () => {
+        if (isSaving || isDeleting) return;
         setIsConfirmingDelete(false);
         setErrorMessage('');
         setIsErrorOpen(false);
@@ -260,21 +265,30 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
                                         }
                                     }
 
-                                    const res = await onSave(idCheck.value, {
-                                        name: nameCheck.value,
-                                        location: locationCheck.value,
-                                        capacity: capacityCheck.value,
-                                        features: featuresCheck.value,
-                                        category_ids: cleanCategoryIds
-                                    });
-                                    if (res && !res.success) {
-                                        setErrorMessage(res.error || 'Failed to save room changes.');
+                                    setIsSaving(true);
+                                    try {
+                                        const res = await onSave(idCheck.value, {
+                                            name: nameCheck.value,
+                                            location: locationCheck.value,
+                                            capacity: capacityCheck.value,
+                                            features: featuresCheck.value,
+                                            category_ids: cleanCategoryIds
+                                        });
+                                        if (res && !res.success) {
+                                            setErrorMessage(res.error || 'Failed to save room changes.');
+                                            setIsErrorOpen(true);
+                                        }
+                                    } catch (err) {
+                                        setErrorMessage(err.message || 'Failed to save room changes.');
                                         setIsErrorOpen(true);
+                                    } finally {
+                                        setIsSaving(false);
                                     }
                                 }}
-                                className="flex-[3] rounded-xl bg-slate-900 p-3.5 font-semibold text-white shadow-sm hover:bg-slate-800 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                                disabled={isSaving || isDeleting}
+                                className="flex-[3] rounded-xl bg-slate-900 p-3.5 font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                             >
-                                <Save size={18} /> Save Changes
+                                <Save size={18} /> {isSaving ? 'Saving...' : 'Save Changes'}
                             </button>
                         </div>
                     ) : (
@@ -288,19 +302,29 @@ function EditRooms({ room, isOpen, onClose, onSave, onDelete }) {
                                         setIsErrorOpen(true);
                                         return;
                                     }
-                                    const res = await onDelete(idCheck.value);
-                                    if (res && !res.success) {
-                                        setErrorMessage(res.error || 'Failed to delete room.');
+                                    setIsDeleting(true);
+                                    try {
+                                        const res = await onDelete(idCheck.value);
+                                        if (res && !res.success) {
+                                            setErrorMessage(res.error || 'Failed to delete room.');
+                                            setIsErrorOpen(true);
+                                        }
+                                    } catch (err) {
+                                        setErrorMessage(err.message || 'Failed to delete room.');
                                         setIsErrorOpen(true);
+                                    } finally {
+                                        setIsDeleting(false);
                                     }
                                 }}
-                                className="flex-[3] rounded-xl bg-red-600 p-3.5 font-semibold text-white shadow-sm hover:bg-red-700 transition-all flex items-center justify-center gap-2"
+                                disabled={isSaving || isDeleting}
+                                className="flex-[3] rounded-xl bg-red-600 p-3.5 font-semibold text-white shadow-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                             >
-                                <Trash2 size={18} /> Confirm Delete
+                                <Trash2 size={18} /> {isDeleting ? 'Deleting...' : 'Confirm Delete'}
                             </button>
                             <button
                                 onClick={() => setIsConfirmingDelete(false)}
-                                className="flex-[2] rounded-xl bg-white border border-slate-200 p-3.5 font-semibold text-slate-600 hover:bg-slate-50 transition-all"
+                                disabled={isSaving || isDeleting}
+                                className="flex-[2] rounded-xl bg-white border border-slate-200 p-3.5 font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                             >
                                 Cancel
                             </button>

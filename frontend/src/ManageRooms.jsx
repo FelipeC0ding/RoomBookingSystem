@@ -13,6 +13,7 @@ import { validateSearchTerm } from './lib/validation.js';
 import EditRoom from './PopUps/editRoom';
 import AddRoom from './PopUps/AddRoom';
 import ManageCategories from './PopUps/ManageCategories';
+import {supabase} from './supabaseClient'
 
 function ManageRooms({ onGoBack }) {
     const [isLoading, setIsLoading] = useState(true);
@@ -27,26 +28,138 @@ function ManageRooms({ onGoBack }) {
 
     // State for categories
     const [categories, setCategories] = useState([]);
+
     
+    // Function to refresh rooms from database (bypassing cache)
+    const refreshRooms = async () => {
+        try {
+            const roomsData = await fetchData.getRooms(true);
+            if (roomsData) {
+                setRooms(roomsData);
+            }
+        } catch (error) {
+            console.error("Error fetching rooms:", error);
+        }
+    };
+
+    // Function to refresh categories from database
+    const refreshCategories = async () => {
+        try {
+            const categoriesData = await fetchData.getCategories();
+            if (categoriesData) {
+                setCategories(categoriesData);
+            }
+        } catch (error) {
+            console.error("Error fetching categories:", error);
+        }
+    };
+
     useEffect(() => {
-        async function loadData() {
+        let isMounted = true;
+        let roomChannel = null;
+
+        async function initRealtimeAndData() {
             setIsLoading(true);
             try {
-                // Fetch both rooms and categories concurrently for faster, synchronized loading
+                // 1. Fetch initial data concurrently
                 const [roomsData, categoriesData] = await Promise.all([
                     fetchData.getRooms(),
                     fetchData.getCategories()
                 ]);
                 
-                setRooms(roomsData || []);
-                setCategories(categoriesData || []);
+                if (isMounted) {
+                    setRooms(roomsData || []);
+                    setCategories(categoriesData || []);
+                }
             } catch (error) {
                 console.error("Error fetching data:", error);
             } finally {
-                setIsLoading(false);
+                if (isMounted) {
+                    setIsLoading(false);
+                }
             }
+
+            // 2. Ensure session token is attached to the Realtime connection for RLS authorization
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.access_token) {
+                    await supabase.realtime.setAuth(session.access_token);
+                }
+            } catch (authErr) {
+                console.warn("Realtime setAuth warning:", authErr);
+            }
+
+            if (!isMounted) return;
+
+            // 3. Create a unique channel to avoid reusing closing/stale channels across re-mounts
+            const channelId = 'system-rooms-channel';
+            roomChannel = supabase.channel(channelId);
+            const handleRoomChange = (payload) => {
+                console.log('Realtime change received for Room:', payload);
+                
+                if (!isMounted) return;
+
+                if (payload.eventType === 'INSERT') {
+                    setRooms(prevRooms => [...prevRooms, payload.new]);
+                } 
+                else if (payload.eventType === 'UPDATE') {
+                    setRooms(prevRooms => prevRooms.map(room => {
+                        const roomId = room.RoomID ?? room.id;
+                        const payloadId = payload.new.RoomID ?? payload.new.id;
+                        return roomId === payloadId ? { ...room, ...payload.new } : room;
+                    }));
+                } 
+                else if (payload.eventType === 'DELETE') {
+                    setRooms(prevRooms => prevRooms.filter(room => {
+                        const roomId = room.RoomID ?? room.id;
+                        const payloadId = payload.old.RoomID ?? payload.old.id;
+                        return roomId !== payloadId;
+                    }));
+                }
+            };
+
+            const handleCategoryChange = (payload) => {
+                console.log('Realtime change received for Category:', payload);
+                if (isMounted) {
+                    refreshRooms();
+                    refreshCategories();
+                }
+            };
+
+            roomChannel
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'Room' },
+                    handleRoomChange
+                )
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'Room' },
+                    handleRoomChange
+                )
+                // CHANGED: Listens to the correct 'categories' table
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'categories' },
+                    handleCategoryChange
+                )
+                .subscribe((status, err) => {
+                    if (err) {
+                        console.error('Realtime Room subscription error:', err);
+                    }
+                    console.log('Realtime Room subscription status:', status);
+                });
         }
-        loadData();
+
+        initRealtimeAndData();
+
+        // Cleanup on unmount
+        return () => {
+            isMounted = false;
+            if (roomChannel) {
+                supabase.removeChannel(roomChannel);
+            }
+        };
     }, []);
 
     const filteredRooms = rooms.filter((room) => {
@@ -224,7 +337,10 @@ function ManageRooms({ onGoBack }) {
             <ManageCategories 
                 isOpen={manageCategoriesOpen}
                 onClose={() => setManageCategoriesOpen(false)}
-                onCategoriesUpdated={(updatedCats) => setCategories(updatedCats)}
+                onCategoriesUpdated={(updatedCats) => {
+                    setCategories(updatedCats);
+                    refreshRooms();
+                }}
             />
 
             {popUpOpen && selectedRoom && (
@@ -248,11 +364,29 @@ function ManageRooms({ onGoBack }) {
                         if (!res || !res.success) {
                             return res || { success: false, error: 'Failed to update room.' };
                         }
+                        
+                        // Close popup
                         setPopUpState(false);
                         setSelectedRoom(null);
-                        // Silent background refresh
-                        const updatedRooms = await fetchData.getRooms();
-                        setRooms(updatedRooms || []);
+
+                        // 1. Optimistically update local state immediately so changes reflect on the page instantly
+                        setRooms(prev => prev.map(r => {
+                            const rId = r.RoomID ?? r.room_id ?? r.id;
+                            if (String(rId) === String(id)) {
+                                return {
+                                    ...r,
+                                    RoomName: updatedData.name,
+                                    Location: updatedData.location,
+                                    Capacity: parseInt(updatedData.capacity, 10),
+                                    Features: updatedData.features,
+                                    category_ids: updatedData.category_ids
+                                };
+                            }
+                            return r;
+                        }));
+
+                        // 2. Fetch fresh rooms from database to ensure full consistency
+                        await refreshRooms();
                         return { success: true };
                     }}
                     onDelete={async(roomID) => {
@@ -260,11 +394,16 @@ function ManageRooms({ onGoBack }) {
                         if (!res || !res.success) {
                             return res || { success: false, error: 'Failed to delete room.' };
                         }
+                        
+                        // Close popup
                         setPopUpState(false);
                         setSelectedRoom(null);
-                        // Silent background refresh
-                        const updatedRooms = await fetchData.getRooms();
-                        setRooms(updatedRooms || []);
+
+                        // Optimistically remove from state immediately
+                        setRooms(prev => prev.filter(r => String(r.RoomID ?? r.room_id ?? r.id) !== String(roomID)));
+
+                        // Fetch fresh rooms from database
+                        await refreshRooms();
                         return { success: true };
                     }}
                 />
@@ -278,10 +417,9 @@ function ManageRooms({ onGoBack }) {
                     if (!res || !res.success) {
                         return res || { success: false, error: 'Failed to add room.' };
                     }
+                    
                     setAddRoom(false);
-                    // Silent background refresh
-                    const updatedRooms = await fetchData.getRooms();
-                    setRooms(updatedRooms || []);
+                    await refreshRooms();
                     return { success: true };
                 }}
             />

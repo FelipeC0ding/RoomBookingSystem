@@ -33,35 +33,95 @@ function ManageUsers({ onGoBack }) {
         setIsErrorPopupOpen(true);
     };
 
+    const fetchUsers = async () => {
+        const data = await fetchData.getAllUsers();
+        if (Array.isArray(data)) {
+            setUsers(data);
+        } else {
+            console.error("Database Error: Expected an array of users, but received:", data);
+            setUsers([]);
+        }
+    };
+
     useEffect(() => {
-        async function loadData() {
-            const sessionUser = await fetchData.getUserData();
-            if (sessionUser) {
-                setCurrentUserId(sessionUser.id);
+        let isMounted = true;
+        let userChannel = null;
+
+        async function initRealtimeAndData() {
+            try {
+                const sessionUser = await fetchData.getUserData();
+                if (isMounted && sessionUser) {
+                    setCurrentUserId(sessionUser.id);
+                }
+            } catch (err) {
+                console.error("Error fetching session user:", err);
             }
 
             const data = await fetchData.getAllUsers();
-            if (Array.isArray(data)) {
-                setUsers(data);
-            } else {
-                console.error("Database Error: Expected an array of users, but received:", data);
-                setUsers([]);
+            if (isMounted) {
+                if (Array.isArray(data)) {
+                    setUsers(data);
+                } else {
+                    console.error("Database Error: Expected an array of users, but received:", data);
+                    setUsers([]);
+                }
             }
-        }
-        loadData();
-    }, []);
 
-    useEffect(() => {
-        async function getUsers() {
-            const data = await fetchData.getAllUsers();
-            if (Array.isArray(data)) {
-                setUsers(data);
-            } else {
-                console.error("Database Error: Expected an array of users, but received:", data);
-                setUsers([]);
+            // Ensure session token is attached to Realtime connection for RLS authorization
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.access_token) {
+                    await supabase.realtime.setAuth(session.access_token);
+                }
+            } catch (authErr) {
+                console.warn("Realtime setAuth warning:", authErr);
             }
+
+            if (!isMounted) return;
+
+            // Use unique channel to avoid collisions with closing/stale channels on unmount/remount
+            const channelId = `users-realtime-${Date.now()}`;
+            userChannel = supabase.channel(channelId);
+
+            const handleUserChange = (payload) => {
+                console.log('Realtime change received for User:', payload);
+                if (isMounted) {
+                    fetchUsers();
+                }
+            };
+
+            userChannel
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'User' },
+                    handleUserChange
+                )
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'user' },
+                    handleUserChange
+                )
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'auth_login_attempts' },
+                    handleUserChange
+                )
+                .subscribe((status, err) => {
+                    if (err) {
+                        console.error('Realtime User subscription error:', err);
+                    }
+                    console.log('Realtime User subscription status:', status);
+                });
         }
-        getUsers();
+
+        initRealtimeAndData();
+
+        return () => {
+            isMounted = false;
+            if (userChannel) {
+                supabase.removeChannel(userChannel);
+            }
+        };
     }, []);
 
     const activeList = users.filter(u => u.Confirmed);

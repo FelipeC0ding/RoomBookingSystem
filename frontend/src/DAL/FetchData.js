@@ -739,15 +739,15 @@ export default class FetchDAL {
         
         return data;
     }
-    static async getRooms() {
-        console.log('Getting Rooms');
+    static async getRooms(forceRefresh = false) {
+        console.log('Getting Rooms', forceRefresh ? '(force refresh)' : '');
         let orgID = await this.loggedInOrgID();
-        if (!orgID) return null;
-
-        const cacheKey = `rooms:org:${orgID}`;
+        const cacheKey = orgID ? `rooms:org:${orgID}` : null;
         
-        const cachedRooms = await cacheGet(cacheKey);
-        if (cachedRooms) return cachedRooms;
+        if (!forceRefresh && cacheKey) {
+            const cachedRooms = await cacheGet(cacheKey);
+            if (cachedRooms) return cachedRooms;
+        }
 
         const { data, error } = await supabase.rpc('get_rooms_in_my_org');
 
@@ -756,7 +756,9 @@ export default class FetchDAL {
             return null;
         }
 
-        await cacheSet(cacheKey, data, 3600);
+        if (cacheKey) {
+            await cacheSet(cacheKey, data, 3600);
+        }
         return data;
     }
     static async AddNewRoom(title, location, capacity, features, categoryIds) {
