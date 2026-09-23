@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Lock, UserPlus, ArrowLeft, School, User, ShieldCheck } from 'lucide-react';
 import FetchData from './DAL/FetchData';
 import PopUp from './PopUps/popUpSignUp';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from './supabaseClient';
-import { validatePersonName, validatePassword } from './lib/validation';
+import { useNavigate } from 'react-router-dom'
+import { supabase } from './supabaseClient'
 
 const INPUT_CONTAINER = "relative mb-1 w-full";
 const ICON_STYLE = "absolute left-3 top-1/2 -translate-y-1/2 text-gray-400";
@@ -36,7 +35,7 @@ function SignUp() {
     });
     
     const navigate = useNavigate();
-    const isStrong = validatePassword(password).isValid;
+    const isStrong = password.length >= 6 && /[A-Z]/.test(password) && /[^A-Za-z0-9]/.test(password);
 
     useEffect(() => {
         const setupUser = async (session) => {
@@ -115,35 +114,13 @@ function SignUp() {
         if (e) e.preventDefault();
         setIsSubmitting(true);
 
-        const fnCheck = validatePersonName(firstname, 'First name');
-        if (!fnCheck.isValid) {
-            setPopupConfig({ isOpen: true, type: 'error', title: 'Invalid Name', message: fnCheck.error });
-            setIsSubmitting(false);
-            return;
-        }
-
-        const snCheck = validatePersonName(surname, 'Surname');
-        if (!snCheck.isValid) {
-            setPopupConfig({ isOpen: true, type: 'error', title: 'Invalid Name', message: snCheck.error });
-            setIsSubmitting(false);
-            return;
-        }
-
-        if (!selectedDepartment) {
-            setPopupConfig({ isOpen: true, type: 'error', title: 'Department Required', message: 'Please select your department.' });
-            setIsSubmitting(false);
-            return;
-        }
-
-        const pwCheck = validatePassword(password);
-        if (!pwCheck.isValid) {
-            setPopupConfig({ isOpen: true, type: 'error', title: 'Weak Password', message: pwCheck.error });
-            setIsSubmitting(false);
-            return;
-        }
-
         if (password !== passwordConfirm) {
             setPopupConfig({ isOpen: true, type: 'error', title: 'Mismatch', message: 'Passwords must match.' });
+            setIsSubmitting(false);
+            return;
+        }
+        if (!isStrong) {
+            setPopupConfig({ isOpen: true, type: 'error', title: 'Weak Password', message: 'Requirements not met.' });
             setIsSubmitting(false);
             return;
         }
@@ -153,8 +130,8 @@ function SignUp() {
             const { error: authError } = await supabase.auth.updateUser({
                 password: password,
                 data: {
-                    Firstname: fnCheck.value,
-                    Surname: snCheck.value,
+                    Firstname: firstname,
+                    Surname: surname,
                 }
             });
             if (authError) throw authError;
@@ -164,8 +141,8 @@ function SignUp() {
 
             // Securely create the user profile via our Postgres RPC
             const { error: rpcError } = await supabase.rpc('complete_signup', {
-                p_firstname: fnCheck.value,
-                p_surname: snCheck.value,
+                p_firstname: firstname,
+                p_surname: surname,
                 p_department_id: deptID
             });
             
@@ -175,7 +152,7 @@ function SignUp() {
                 isOpen: true,
                 type: 'success',
                 title: 'Account Created!',
-                message: "Your account details have been saved successfully. Your account is now pending administrator verification before you can access the booking system."
+                message: "Welcome to the system!"
             });
 
         } catch (error) {
@@ -211,14 +188,14 @@ function SignUp() {
                                 <label className="text-sm font-semibold text-gray-700 ml-1">Firstname</label>
                                 <div className={INPUT_CONTAINER}>
                                     <User size={18} className={ICON_STYLE} />
-                                    <input type="text" placeholder="Jane" maxLength={50} value={firstname} required className={INPUT_STYLE} onChange={(e) => setFirstname(e.target.value)} />
+                                    <input type="text" placeholder="Jane" required className={INPUT_STYLE} onChange={(e) => setFirstname(e.target.value)} />
                                 </div>
                             </div>
                             <div className="space-y-1">
                                 <label className="text-sm font-semibold text-gray-700 ml-1">Surname</label>
                                 <div className={INPUT_CONTAINER}>
                                     <User size={18} className={ICON_STYLE} />
-                                    <input type="text" placeholder="Doe" maxLength={50} value={surname} required className={INPUT_STYLE} onChange={(e) => setSurname(e.target.value)} />
+                                    <input type="text" placeholder="Doe" required className={INPUT_STYLE} onChange={(e) => setSurname(e.target.value)} />
                                 </div>
                             </div>
                         </div>
@@ -239,7 +216,7 @@ function SignUp() {
                                     >
                                         <option value="" disabled>{Deptloading ? "Loading..." : "Select department"}</option>
                                         {Departments.map((dept) => (
-                                             <option key={dept.DepartmentID} value={dept.Name}>{dept.Name}</option>
+                                            <option key={dept.DepartmentID} value={dept.Name}>{dept.Name}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -250,7 +227,7 @@ function SignUp() {
                                     <label className="text-sm font-semibold text-gray-700 ml-1">Password</label>
                                     <div className={INPUT_CONTAINER}>
                                         <Lock size={18} className={ICON_STYLE} />
-                                        <input type="password" placeholder="••••••••" maxLength={100} value={password} required className={INPUT_STYLE} onChange={(e) => setPassword(e.target.value)} />
+                                        <input type="password" placeholder="••••••••" required className={INPUT_STYLE} onChange={(e) => setPassword(e.target.value)} />
                                     </div>
                                     <div className="mt-2">
                                         <div className="h-1 w-full bg-gray-200 rounded-full">
@@ -263,7 +240,7 @@ function SignUp() {
                                         <p className={`text-[10px] mt-1 font-medium ${isStrong ? 'text-green-600' : 'text-gray-400'}`}>
                                             {isStrong
                                                 ? "✓ Password meets requirements"
-                                                : "Requires: 8+ chars, uppercase, lowercase, number, special character"}
+                                                : "Requires: 6+ chars, 1 Capital, 1 Special character"}
                                         </p>
                                     </div>
                                 </div>
@@ -271,7 +248,7 @@ function SignUp() {
                                     <label className="text-sm font-semibold text-gray-700 ml-1">Confirm</label>
                                     <div className={INPUT_CONTAINER}>
                                         <Lock size={18} className={ICON_STYLE} />
-                                        <input type="password" placeholder="••••••••" maxLength={100} value={passwordConfirm} required className={INPUT_STYLE} onChange={(e) => setPasswordConfirm(e.target.value)} />
+                                        <input type="password" placeholder="••••••••" required className={INPUT_STYLE} onChange={(e) => setPasswordConfirm(e.target.value)} />
                                     </div>
                                 </div>
                             </div>
