@@ -47,6 +47,17 @@ function ManageUsers({ onGoBack }) {
         let isMounted = true;
         let userChannel = null;
 
+        const loadUsers = async () => {
+            const data = await fetchData.getAllUsers();
+            if (!isMounted) return;
+            if (Array.isArray(data)) {
+                setUsers(data);
+            } else {
+                console.error("Database Error: Expected an array of users, but received:", data);
+                setUsers([]);
+            }
+        };
+
         async function initRealtimeAndData() {
             try {
                 const sessionUser = await fetchData.getUserData();
@@ -57,60 +68,45 @@ function ManageUsers({ onGoBack }) {
                 console.error("Error fetching session user:", err);
             }
 
-            const data = await fetchData.getAllUsers();
-            if (isMounted) {
-                if (Array.isArray(data)) {
-                    setUsers(data);
-                } else {
-                    console.error("Database Error: Expected an array of users, but received:", data);
-                    setUsers([]);
-                }
-            }
+            await loadUsers();
+            if (!isMounted) return;
 
-            // Ensure session token is attached to Realtime connection for RLS authorization
+            // Attach session token for RLS authorization
             try {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session?.access_token) {
-                    await supabase.realtime.setAuth(session.access_token);
+                    supabase.realtime.setAuth(session.access_token);
                 }
             } catch (authErr) {
                 console.warn("Realtime setAuth warning:", authErr);
             }
 
-            if (!isMounted) return;
-
-            // Use unique channel to avoid collisions with closing/stale channels on unmount/remount
-            const channelId = `users-realtime-${Date.now()}`;
-            userChannel = supabase.channel(channelId);
-
-            const handleUserChange = (payload) => {
-                console.log('Realtime change received for User:', payload);
+            const handleRealtimeUpdate = (payload) => {
+                console.log('Realtime user update received:', payload);
                 if (isMounted) {
-                    fetchUsers();
+                    loadUsers();
                 }
             };
 
-            userChannel
+            userChannel = supabase
+                .channel(`manage-users-${Date.now()}`)
                 .on(
                     'postgres_changes',
                     { event: '*', schema: 'public', table: 'User' },
-                    handleUserChange
-                )
-                .on(
-                    'postgres_changes',
-                    { event: '*', schema: 'public', table: 'user' },
-                    handleUserChange
+                    handleRealtimeUpdate
                 )
                 .on(
                     'postgres_changes',
                     { event: '*', schema: 'public', table: 'auth_login_attempts' },
-                    handleUserChange
+                    handleRealtimeUpdate
                 )
+                // ADD THIS BLOCK: Reveals hidden Postgres Realtime rejections
+                .on('system', {}, (payload) => {
+                    console.log('Realtime SYSTEM event:', payload);
+                })
                 .subscribe((status, err) => {
-                    if (err) {
-                        console.error('Realtime User subscription error:', err);
-                    }
-                    console.log('Realtime User subscription status:', status);
+                    if (err) console.error('ManageUsers Realtime error:', err);
+                    console.log('ManageUsers Realtime status:', status);
                 });
         }
 
@@ -174,7 +170,6 @@ function ManageUsers({ onGoBack }) {
         }
     };
 
-    // <--- 3. UPDATED TOGGLE ADMIN LOGIC --->
     const handleToggleAdmin = async (user) => {
         if (!user) {
             setConfirmingAdminId(null);
